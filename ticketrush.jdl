@@ -1,0 +1,110 @@
+/*
+ * TicketRush - Phase 1: gateway + catalog
+ * Target: generator-jhipster 9.4.0 (Spring Boot 4.1.1, Spring Cloud 2025.1.3, Java 21)
+ *
+ * Notes:
+ * - The gateway is reactive (Spring Cloud Gateway WebFlux). JHipster 9.4 rejects a
+ *   non-reactive gateway unless --experimental is passed.
+ * - Ticket availability is NOT stored in catalog. totalQuantity here is the
+ *   configured capacity; live stock and holds belong to the inventory service (phase 2).
+ * - Redis cache and Kafka are deliberately left out until phase 2.
+ */
+
+application {
+  config {
+    baseName gateway
+    applicationType gateway
+    packageName com.ticketrush.gateway
+    serverPort 8080
+    reactive true
+    authenticationType oauth2
+    serviceDiscoveryType consul
+    databaseType sql
+    devDatabaseType postgresql
+    prodDatabaseType postgresql
+    buildTool maven
+    clientFramework react
+    nativeLanguage en
+    languages [en, vi]
+    testFrameworks []
+  }
+  entities Venue, Event, TicketType
+}
+
+application {
+  config {
+    baseName catalog
+    applicationType microservice
+    packageName com.ticketrush.catalog
+    serverPort 8081
+    reactive false
+    authenticationType oauth2
+    serviceDiscoveryType consul
+    databaseType sql
+    devDatabaseType postgresql
+    prodDatabaseType postgresql
+    cacheProvider no
+    enableHibernateCache false
+    buildTool maven
+    nativeLanguage en
+    languages [en, vi]
+  }
+  entities Venue, Event, TicketType
+}
+
+enum EventStatus {
+  DRAFT,
+  PUBLISHED,
+  CANCELLED,
+  ENDED
+}
+
+entity Venue {
+  id Long
+  name String required maxlength(200)
+  address String required maxlength(500)
+  city String required maxlength(100)
+  capacity Integer required min(1)
+}
+
+entity Event {
+  id Long
+  name String required maxlength(200)
+  slug String required unique maxlength(220) pattern(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+  description TextBlob
+  startTime Instant required
+  endTime Instant
+  status EventStatus required
+  posterUrl String maxlength(1000)
+}
+
+entity TicketType {
+  id Long
+  name String required maxlength(100)
+  price BigDecimal required min(0)
+  currency String required minlength(3) maxlength(3)
+  totalQuantity Integer required min(1)
+  saleStart Instant
+  saleEnd Instant
+}
+
+relationship ManyToOne {
+  Event{venue(name) required} to Venue
+}
+
+relationship OneToMany {
+  Event{ticketTypes} to TicketType{event(name) required}
+}
+
+service * with serviceImpl
+dto * with mapstruct
+paginate Venue, Event with pagination
+filter Event
+microservice Venue, Event, TicketType with catalog
+
+deployment {
+  deploymentType docker-compose
+  appsFolders [gateway, catalog]
+  serviceDiscoveryType consul
+  monitoring no
+}

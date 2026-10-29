@@ -1,0 +1,27 @@
+{
+  "generator-jhipster": {
+    "applicationIndex": 1,
+    "applicationType": "microservice",
+    "authenticationType": "oauth2",
+    "baseName": "catalog",
+    "buildTool": "maven",
+    "cacheProvider": "no",
+    "creationTimestamp": 1704040426520,
+    "databaseType": "sql",
+    "devDatabaseType": "postgresql",
+    "enableHibernateCache": false,
+    "entities": ["Venue", "Event", "TicketType"],
+    "gatewayServerPort": "8080",
+    "jhipsterVersion": "9.4.0",
+    "jwtSecretKey": "ZDE2ZjgwNjUyY2MxY2RhMGVlYjM2YjUzYzliYzMxYTZmMmIzYThlMzE4MjdiZmFmMWFkZDRmNWRkNGU3Njk0MTRmN2M1MGEyODkxNmQ4OTllZDAwNWVjNjg0NWMxY2E1ODc5MjY3MTY5MWI4MzBjODRiNjQ2OTU4NjZkYWIwZWU=",
+    "languages": ["en", "vi"],
+    "lastLiquibaseTimestamp": 1704040606000,
+    "nativeLanguage": "en",
+    "packageName": "com.ticketrush.catalog",
+    "prodDatabaseType": "postgresql",
+    "reactive": false,
+    "serverPort": "8081",
+    "serviceDiscoveryType": "consul",
+    "skipClient": true
+  }
+}

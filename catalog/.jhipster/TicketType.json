@@ -1,0 +1,63 @@
+{
+  "annotations": {
+    "changelogDate": "20231222135134"
+  },
+  "applications": ["gateway", "catalog"],
+  "clientRootFolder": "catalog",
+  "databaseType": "sql",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "name",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "100"
+    },
+    {
+      "fieldName": "price",
+      "fieldType": "BigDecimal",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "0"
+    },
+    {
+      "fieldName": "currency",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "minlength", "maxlength"],
+      "fieldValidateRulesMaxlength": "3",
+      "fieldValidateRulesMinlength": "3"
+    },
+    {
+      "fieldName": "totalQuantity",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "1"
+    },
+    {
+      "fieldName": "saleStart",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "saleEnd",
+      "fieldType": "Instant"
+    }
+  ],
+  "microserviceName": "catalog",
+  "name": "TicketType",
+  "relationships": [
+    {
+      "otherEntityField": "name",
+      "otherEntityName": "event",
+      "otherEntityRelationshipName": "ticketTypes",
+      "relationshipName": "event",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one",
+      "relationshipValidateRules": "required"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceImpl"
+}

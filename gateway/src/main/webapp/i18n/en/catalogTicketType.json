@@ -1,0 +1,34 @@
+{
+  "gatewayApp": {
+    "catalogTicketType": {
+      "home": {
+        "title": "Ticket Types",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Ticket Type",
+        "createOrEditLabel": "Create or edit a Ticket Type",
+        "notFound": "No Ticket Types found"
+      },
+      "delete": {
+        "question": "Are you sure you want to delete Ticket Type {{ id }}?"
+      },
+      "detail": {
+        "title": "Ticket Type"
+      },
+      "id": "Id",
+      "name": "Name",
+      "price": "Price",
+      "currency": "Currency",
+      "totalQuantity": "Total Quantity",
+      "saleStart": "Sale Start",
+      "saleEnd": "Sale End",
+      "event": "Event"
+    }
+  },
+  "catalogApp": {
+    "catalogTicketType": {
+      "created": "A new Ticket Type is created with identifier {{ param }}",
+      "updated": "A Ticket Type is updated with identifier {{ param }}",
+      "deleted": "A Ticket Type is deleted with identifier {{ param }}"
+    }
+  }
+}

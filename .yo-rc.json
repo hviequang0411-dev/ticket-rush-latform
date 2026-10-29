@@ -1,0 +1,8 @@
+{
+  "generator-jhipster": {
+    "appsFolders": ["gateway", "catalog"],
+    "baseName": "workspaces",
+    "defaultCommand": "workspaces",
+    "deploymentType": "none"
+  }
+}

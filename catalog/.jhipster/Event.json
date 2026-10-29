@@ -1,0 +1,76 @@
+{
+  "annotations": {
+    "changelogDate": "20231222135034"
+  },
+  "applications": ["gateway", "catalog"],
+  "clientRootFolder": "catalog",
+  "databaseType": "sql",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "name",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "200"
+    },
+    {
+      "fieldName": "slug",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique", "maxlength", "pattern"],
+      "fieldValidateRulesMaxlength": "220",
+      "fieldValidateRulesPattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    {
+      "fieldName": "description",
+      "fieldType": "TextBlob"
+    },
+    {
+      "fieldName": "startTime",
+      "fieldType": "Instant",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "endTime",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "status",
+      "fieldType": "EventStatus",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "DRAFT,PUBLISHED,CANCELLED,ENDED"
+    },
+    {
+      "fieldName": "posterUrl",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "1000"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "microserviceName": "catalog",
+  "name": "Event",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityName": "ticketType",
+      "otherEntityRelationshipName": "event",
+      "relationshipName": "ticketTypes",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityField": "name",
+      "otherEntityName": "venue",
+      "relationshipName": "venue",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one",
+      "relationshipValidateRules": "required"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceImpl"
+}

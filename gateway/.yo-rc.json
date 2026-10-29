@@ -1,0 +1,32 @@
+{
+  "generator-jhipster": {
+    "applicationIndex": 0,
+    "applicationType": "gateway",
+    "applications": {
+      "catalog": {
+        "applicationIndex": 1,
+        "serverPort": "8081"
+      }
+    },
+    "authenticationType": "oauth2",
+    "baseName": "gateway",
+    "buildTool": "maven",
+    "clientFramework": "react",
+    "creationTimestamp": 1703252914559,
+    "databaseType": "sql",
+    "devDatabaseType": "postgresql",
+    "devServerPort": null,
+    "entities": ["Venue", "Event", "TicketType"],
+    "jhipsterVersion": "9.4.0",
+    "jwtSecretKey": "NDU0NmRjZWQ4N2I3ZTlmYjVjMDhkYTY3ZjczNjdkYmMzN2NlYTQ3Njk1OGJlNGIyNGEzOGRjM2NmMmM3MDI5YjUyZmM5Zjg2NWQ4M2U4NGUzNDcwMTg5NTg4YjU5ODJkMWNlMjA3NjRjZDA0MzdkZDE3YWE4Y2VmYzA1MGMyNjQ=",
+    "languages": ["en", "vi"],
+    "lastLiquibaseTimestamp": 1703253094000,
+    "nativeLanguage": "en",
+    "packageName": "com.ticketrush.gateway",
+    "prodDatabaseType": "postgresql",
+    "reactive": true,
+    "serverPort": "8080",
+    "serviceDiscoveryType": "consul",
+    "testFrameworks": []
+  }
+}

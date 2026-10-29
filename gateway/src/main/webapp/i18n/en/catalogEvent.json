@@ -1,0 +1,36 @@
+{
+  "gatewayApp": {
+    "catalogEvent": {
+      "home": {
+        "title": "Events",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Event",
+        "createOrEditLabel": "Create or edit a Event",
+        "notFound": "No Events found"
+      },
+      "delete": {
+        "question": "Are you sure you want to delete Event {{ id }}?"
+      },
+      "detail": {
+        "title": "Event"
+      },
+      "id": "Id",
+      "name": "Name",
+      "slug": "Slug",
+      "description": "Description",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "status": "Status",
+      "posterUrl": "Poster Url",
+      "ticketTypes": "Ticket Types",
+      "venue": "Venue"
+    }
+  },
+  "catalogApp": {
+    "catalogEvent": {
+      "created": "A new Event is created with identifier {{ param }}",
+      "updated": "A Event is updated with identifier {{ param }}",
+      "deleted": "A Event is deleted with identifier {{ param }}"
+    }
+  }
+}

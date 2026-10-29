@@ -1,0 +1,11 @@
+{
+  "gatewayApp": {
+    "EventStatus": {
+      "null": "",
+      "DRAFT": "DRAFT",
+      "PUBLISHED": "PUBLISHED",
+      "CANCELLED": "CANCELLED",
+      "ENDED": "ENDED"
+    }
+  }
+}

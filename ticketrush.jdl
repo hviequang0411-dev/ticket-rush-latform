@@ -190,6 +190,8 @@ enum OrderStatus {
   FAILED
 }
 
+/** Created only through checkout; the admin API is read-only. */
+@readOnly
 entity Order(ticket_order) {
   id Long
   code String required unique maxlength(32)
@@ -204,6 +206,7 @@ entity Order(ticket_order) {
   updatedAt Instant
 }
 
+@readOnly
 entity OrderItem {
   id Long
   eventId Long required

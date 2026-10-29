@@ -1,10 +1,8 @@
 package com.ticketrush.inventory.web.rest;
 
 import static com.ticketrush.inventory.domain.StockHoldAsserts.*;
-import static com.ticketrush.inventory.web.rest.TestUtil.createUpdateProxyForBean;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -14,7 +12,6 @@ import com.ticketrush.inventory.domain.StockHold;
 import com.ticketrush.inventory.domain.TicketStock;
 import com.ticketrush.inventory.domain.enumeration.HoldStatus;
 import com.ticketrush.inventory.repository.StockHoldRepository;
-import com.ticketrush.inventory.service.dto.StockHoldDTO;
 import com.ticketrush.inventory.service.mapper.StockHoldMapper;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Optimistic locking: a hold expiry (Kafka) and a cancel (REST) can race on the same order -->
+    <changeSet id="20261029130000-1" author="ticketrush">
+        <addColumn tableName="ticket_order">
+            <column name="version" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- "My orders" is listed newest first per user -->
+    <changeSet id="20261029130000-2" author="ticketrush">
+        <createIndex tableName="ticket_order" indexName="ix_ticket_order__user_login__created_at">
+            <column name="user_login"/>
+            <column name="created_at" descending="true"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

@@ -109,6 +109,15 @@ spring:
       config:
         watch:
           enabled: false
+    # Topic contract; mirrored in src/test/resources/config/application.yml
+    function:
+      definition: holdExpired
+    stream:
+      bindings:
+        holdExpired-in-0:
+          destination: inventory.hold-expired.v1
+          content-type: application/json
+          group: order
   docker:
     compose:
       enabled: true
@@ -169,6 +178,13 @@ spring:
         registration:
           oidc:
             scope: openid, profile
+          # Service-to-service calls (see ServiceClientsConfiguration): same Keycloak client, client-credentials grant
+          service:
+            provider: oidc
+            client-id: ${spring.security.oauth2.client.registration.oidc.client-id}
+            client-secret: ${spring.security.oauth2.client.registration.oidc.client-secret}
+            authorization-grant-type: client_credentials
+            scope: openid
   task:
     execution:
       thread-name-prefix: order-task-

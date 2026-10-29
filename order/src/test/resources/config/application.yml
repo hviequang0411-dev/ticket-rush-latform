@@ -24,6 +24,15 @@ spring:
       config:
         enabled: false
       enabled: false
+    # Same topic contract as src/main/resources/config/application.yml (this file replaces it in tests)
+    function:
+      definition: holdExpired
+    stream:
+      bindings:
+        holdExpired-in-0:
+          destination: inventory.hold-expired.v1
+          content-type: application/json
+          group: order
   # Replace by 'prod, faker' to add the faker context and have sample data loaded in production
   liquibase:
     contexts: test

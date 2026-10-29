@@ -72,6 +72,10 @@ public class Order implements Serializable {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "order")
     @JsonIgnoreProperties(value = { "order" }, allowSetters = true)
     private Set<OrderItem> itemses = new HashSet<>();
@@ -250,6 +254,14 @@ public class Order implements Serializable {
         this.itemses.remove(orderItem);
         orderItem.setOrder(null);
         return this;
+    }
+
+    public Long getVersion() {
+        return this.version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here

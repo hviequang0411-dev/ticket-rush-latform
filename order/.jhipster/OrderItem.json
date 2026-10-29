@@ -1,8 +1,12 @@
 {
   "annotations": {
-    "changelogDate": "20231222135134"
+    "changelogDate": "20231222135134",
+    "readOnly": true
   },
-  "applications": ["gateway", "order"],
+  "applications": [
+    "gateway",
+    "order"
+  ],
   "clientRootFolder": "order",
   "databaseType": "sql",
   "dto": "mapstruct",
@@ -14,24 +18,35 @@
     {
       "fieldName": "eventId",
       "fieldType": "Long",
-      "fieldValidateRules": ["required"]
+      "fieldValidateRules": [
+        "required"
+      ]
     },
     {
       "fieldName": "ticketTypeId",
       "fieldType": "Long",
-      "fieldValidateRules": ["required"]
+      "fieldValidateRules": [
+        "required"
+      ]
     },
     {
       "fieldName": "quantity",
       "fieldType": "Integer",
-      "fieldValidateRules": ["required", "min", "max"],
+      "fieldValidateRules": [
+        "required",
+        "min",
+        "max"
+      ],
       "fieldValidateRulesMax": "10",
       "fieldValidateRulesMin": "1"
     },
     {
       "fieldName": "unitPrice",
       "fieldType": "BigDecimal",
-      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRules": [
+        "required",
+        "min"
+      ],
       "fieldValidateRulesMin": "0"
     }
   ],

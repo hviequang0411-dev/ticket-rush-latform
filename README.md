@@ -11,11 +11,16 @@ High-load event ticketing platform built as microservices. Work in progress: pha
   inventory, retries return the same order, sold out is a 409
 - Holds expire on their own; inventory publishes the expiry and the order becomes EXPIRED
 - Overselling is impossible by construction, see [ADR 0003](docs/adr/0003-oversell-prevention.md)
+- Checkout is rate limited per user at the gateway (Redis token bucket, 5 per burst then 1/s; 429 with
+  `X-RateLimit-*` headers). The limiter fails open: a Redis outage lets requests through instead of taking the
+  gateway down
+- Stock and order screens in the UI are admin-only and read-only; buyers go through checkout
 
 ```mermaid
 flowchart LR
     buyer((Buyer)) --> gateway[gateway<br/>Spring Cloud Gateway + React]
     gateway --> catalog & order & inventory
+    gateway --- gredis[(Redis<br/>rate limits)]
     order -- "REST, client-credentials token" --> catalog
     order -- "REST /api/internal (ROLE_SERVICE)" --> inventory
     catalog -- "catalog.ticket-type.v1" --> kafka[(Kafka)]
@@ -87,6 +92,7 @@ Integration tests run against real PostgreSQL, Redis and Kafka via Testcontainer
 |---|---|
 | `ReservationServiceIT` | 200 concurrent buyers for 50 seats: exactly 50 holds, 0 left; mixed-order multi-item orders never deadlock |
 | `CheckoutServiceIT` | 8 concurrent retries with the same Idempotency-Key create one order and one reservation |
+| `CheckoutRateLimitIT` | the gateway rejects a burst above the limit with 429, per user, without blocking an event-loop thread (BlockHound) |
 | `TicketTypeEventsPublisherIT` | catalog publishes only after commit, never for a rolled-back change |
 
 End to end, through the gateway, against the running stack (gateway on port 8088, holds shortened to 20 s):
@@ -97,7 +103,7 @@ python scripts/e2e/phase2.py
 ```
 
 It checks the Kafka stock sync, checkout, idempotent replay, cancel, 40 concurrent buyers for 5 seats over HTTP
-(5 x 201, 35 x 409, stock 0), and a hold expiring into an EXPIRED order.
+(5 x 201, 35 x 409, stock 0), a hold expiring into an EXPIRED order, and the checkout rate limit (22 checks).
 
 ## Regenerating code
 
@@ -109,7 +115,9 @@ python scripts/harden-compose.py
 ```
 
 It moves secrets to `.env`, gives the `internal` Keycloak client `ROLE_SERVICE`, fixes single-node Kafka
-(without it no consumer group works) and configures Consul discovery. Services with hand-written code
+(without it no consumer group works), configures Consul discovery and adds the gateway's Redis. Entities whose
+API is read-only also need their write screens removed: `scripts/make-readonly.py` (REST) and
+`scripts/make-readonly-react.py` (gateway UI). Services with hand-written code
 (inventory, order, catalog) should be regenerated one entity at a time and reviewed, not with `--force`.
 
 ## Repository layout

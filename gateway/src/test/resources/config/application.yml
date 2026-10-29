@@ -27,6 +27,29 @@ spring:
       config:
         enabled: false
       enabled: false
+    loadbalancer:
+      eager-load:
+        clients: order
+    # Same route as src/main/resources/config/application.yml (this file replaces it in tests), smaller bucket
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: order-checkout
+              uri: lb://order
+              order: -1
+              predicates:
+                - Path=/services/order/api/checkout
+              filters:
+                - StripPrefix=2
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: '#{@rateLimitKeyResolver}'
+                    # 3 requests per burst, then one more every 20 s: slow enough that refills during the test
+                    # don't make it flaky (replenishRate can't go below 1 token/s)
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 60
+                    redis-rate-limiter.requestedTokens: 20
   # Replace by 'prod, faker' to add the faker context and have sample data loaded in production
   liquibase:
     contexts: test

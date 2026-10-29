@@ -71,6 +71,9 @@ management:
     env:
       enabled: true
   health:
+    # The rate limiter fails open without Redis; don't let a Redis outage mark the whole gateway DOWN
+    redis:
+      enabled: false
     mail:
       enabled: false # When using the MailService, configure an SMTP server and set this to true
   prometheus:
@@ -103,6 +106,10 @@ management:
 spring:
   application:
     name: gateway
+  data:
+    redis:
+      # Host comes from SPRING_DATA_REDIS_HOST in docker-compose; fail fast instead of stalling startup
+      connect-timeout: 2s
   cloud:
     consul:
       discovery:
@@ -112,11 +119,33 @@ spring:
       config:
         watch:
           enabled: false
+    loadbalancer:
+      # Build each service's load balancer at startup instead of on its first request (which would block a
+      # Netty event-loop thread while the child context loads)
+      eager-load:
+        clients: catalog, inventory, order
     gateway:
       server:
         webflux:
           default-filters:
             - TokenRelay
+          routes:
+            # Checkout is what bots hammer at an on-sale, and each call holds seats: limit it per user.
+            # Runs before the discovery routes (order 0), otherwise identical to /services/order/**.
+            - id: order-checkout
+              uri: lb://order
+              order: -1
+              predicates:
+                - Path=/services/order/api/checkout
+              filters:
+                - StripPrefix=2
+                - name: RequestRateLimiter
+                  args:
+                    # Bean from RateLimitConfiguration: per user, per IP when anonymous
+                    key-resolver: '#{@rateLimitKeyResolver}'
+                    redis-rate-limiter.replenishRate: ${ticketrush.rate-limit.checkout.replenish-rate:1}
+                    redis-rate-limiter.burstCapacity: ${ticketrush.rate-limit.checkout.burst-capacity:5}
+                    redis-rate-limiter.requestedTokens: 1
           discovery:
             locator:
               enabled: true

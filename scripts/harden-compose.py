@@ -7,6 +7,7 @@ generating so that:
 - the Keycloak client `internal` (service-to-service calls) carries ROLE_SERVICE in its tokens
 - single-node Kafka can create its internal topics (without them no consumer group ever works)
 - services only discover healthy instances, so a restarted service is not called at its old address
+- the gateway has its own Redis for rate limiting
 
     python scripts/harden-compose.py
 
@@ -67,6 +68,21 @@ def harden_compose(text: str) -> str:
         "      - KEYCLOAK_WEB_APP_CLIENT_SECRET=${KEYCLOAK_WEB_APP_CLIENT_SECRET:?}\n"
         "      - KEYCLOAK_INTERNAL_CLIENT_SECRET=${KEYCLOAK_INTERNAL_CLIENT_SECRET:?}\n",
     )
+
+    # Gateway rate limiter: its own Redis (catalog-redis belongs to catalog)
+    if "  gateway-redis:\n" not in text:
+        text = re.sub(
+            r"^  gateway-postgresql:\n",
+            "  gateway-redis:\n    image: redis:8.10.1\n  gateway-postgresql:\n",
+            text,
+            count=1,
+            flags=re.M,
+        )
+        text = text.replace(
+            "      - SPRING_LIQUIBASE_PASSWORD=${GATEWAY_DB_PASSWORD:?}\n",
+            "      - SPRING_LIQUIBASE_PASSWORD=${GATEWAY_DB_PASSWORD:?}\n      - SPRING_DATA_REDIS_HOST=gateway-redis\n",
+            1,
+        )
 
     # apache/kafka-native drops its single-node defaults as soon as any KAFKA_* variable is set, so internal topics
     # fall back to replication factor 3 and can't be created on one broker: consumer groups then never get a

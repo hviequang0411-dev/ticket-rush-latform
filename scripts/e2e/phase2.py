@@ -5,7 +5,8 @@
     python scripts/e2e/phase2.py
 
 Covers: catalog -> Kafka -> inventory stock sync, checkout through gateway -> order -> catalog/inventory,
-idempotent replay, cancel, a concurrent sell-out over HTTP, and hold expiry -> Kafka -> order EXPIRED.
+idempotent replay, cancel, a concurrent sell-out over HTTP, hold expiry -> Kafka -> order EXPIRED, and the
+gateway's per-user rate limit on checkout.
 The token is a client-credentials token of the `internal` client, fetched inside the compose network so that
 its issuer is http://keycloak:9080 like the services expect.
 """
@@ -166,6 +167,17 @@ def main():
     )
     check("order EXPIRED after its hold ran out", expired["status"] == "EXPIRED")
     check("expired seats back on sale", stock_of(token, vip)["availableQuantity"] == 100, stock_of(token, vip))
+
+    print("Gateway rate limit on checkout")
+    # Invalid quantity: whatever gets past the limiter is rejected by order with 400, so nothing is bought
+    burst = 80
+    with ThreadPoolExecutor(max_workers=burst) as pool:
+        statuses = [s for s, _ in pool.map(lambda _: call("POST", f"{ORDER}/checkout", token, {"items": [{"ticketTypeId": vip, "quantity": 0}]}, {"Idempotency-Key": str(uuid.uuid4())}), range(burst))]
+    limited = statuses.count(429)
+    check(f"{burst} rapid checkouts from one user: some get 429", limited >= burst - 60, sorted(set(statuses)))
+    check("the rest reach order and get its 400", statuses.count(400) == burst - limited, sorted(set(statuses)))
+    status, _ = call("GET", f"{ORDER}/my-orders", token)
+    check("other routes are not limited by the checkout bucket", status == 200, status)
 
     print()
     print("All checks passed" if not failures else f"{len(failures)} check(s) failed: {failures}")

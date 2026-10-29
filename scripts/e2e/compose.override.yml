@@ -9,3 +9,7 @@ services:
     # 8080 is often taken on a dev machine; the e2e script reads TICKETRUSH_GATEWAY (default http://localhost:8088)
     ports: !override
       - 8088:8080
+    environment:
+      # Room for the 40-buyer race from one test account; the script then checks the limit itself
+      - TICKETRUSH_RATE_LIMIT_CHECKOUT_REPLENISH_RATE=1
+      - TICKETRUSH_RATE_LIMIT_CHECKOUT_BURST_CAPACITY=60

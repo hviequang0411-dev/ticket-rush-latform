@@ -96,3 +96,8 @@ management:
   health:
     mail:
       enabled: false
+
+application:
+  reservation:
+    # Tests drive expiry themselves through ReservationService
+    expiry-job-enabled: false

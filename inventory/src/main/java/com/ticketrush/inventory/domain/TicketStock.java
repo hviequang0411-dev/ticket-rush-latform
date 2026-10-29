@@ -40,6 +40,10 @@ public class TicketStock implements Serializable {
     @Column(name = "available_quantity", nullable = false)
     private Integer availableQuantity;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
     public Long getId() {
@@ -105,6 +109,14 @@ public class TicketStock implements Serializable {
 
     public void setAvailableQuantity(Integer availableQuantity) {
         this.availableQuantity = availableQuantity;
+    }
+
+    public Long getVersion() {
+        return this.version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here

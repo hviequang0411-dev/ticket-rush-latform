@@ -1,8 +1,11 @@
 {
   "annotations": {
-    "changelogDate": "20261029055901"
+    "changelogDate": "20261029055901",
+    "readOnly": true
   },
-  "applications": ["inventory"],
+  "applications": [
+    "inventory"
+  ],
   "clientRootFolder": "inventory",
   "databaseType": "sql",
   "documentation": "Seats held for an order for 10 minutes; one row per (order, ticket type).",
@@ -15,29 +18,40 @@
     {
       "fieldName": "orderId",
       "fieldType": "Long",
-      "fieldValidateRules": ["required"]
+      "fieldValidateRules": [
+        "required"
+      ]
     },
     {
       "fieldName": "quantity",
       "fieldType": "Integer",
-      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRules": [
+        "required",
+        "min"
+      ],
       "fieldValidateRulesMin": "1"
     },
     {
       "fieldName": "status",
       "fieldType": "HoldStatus",
-      "fieldValidateRules": ["required"],
+      "fieldValidateRules": [
+        "required"
+      ],
       "fieldValues": "HELD,CONFIRMED,RELEASED,EXPIRED"
     },
     {
       "fieldName": "expiresAt",
       "fieldType": "Instant",
-      "fieldValidateRules": ["required"]
+      "fieldValidateRules": [
+        "required"
+      ]
     },
     {
       "fieldName": "createdAt",
       "fieldType": "Instant",
-      "fieldValidateRules": ["required"]
+      "fieldValidateRules": [
+        "required"
+      ]
     }
   ],
   "microserviceName": "inventory",

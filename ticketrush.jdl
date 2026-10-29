@@ -163,7 +163,8 @@ enum HoldStatus {
   EXPIRED
 }
 
-/** Seats held for an order for 10 minutes; one row per (order, ticket type). */
+/** Seats held for an order for 10 minutes; one row per (order, ticket type). Written only by reservations. */
+@readOnly
 entity StockHold {
   id Long
   orderId Long required

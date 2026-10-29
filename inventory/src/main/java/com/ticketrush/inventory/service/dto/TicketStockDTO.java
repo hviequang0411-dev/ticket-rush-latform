@@ -28,6 +28,9 @@ public class TicketStockDTO implements Serializable {
     @Min(value = 0)
     private Integer availableQuantity;
 
+    /** Optimistic-lock version; send back the value you read, a stale one is rejected with 409. */
+    private Long version;
+
     public Long getId() {
         return id;
     }
@@ -66,6 +69,14 @@ public class TicketStockDTO implements Serializable {
 
     public void setAvailableQuantity(Integer availableQuantity) {
         this.availableQuantity = availableQuantity;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     @Override

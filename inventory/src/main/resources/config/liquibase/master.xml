@@ -18,4 +18,5 @@
     <include file="config/liquibase/changelog/20261029055901_added_entity_constraints_StockHold.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
+    <include file="config/liquibase/changelog/20261029120000_inventory_concurrency.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

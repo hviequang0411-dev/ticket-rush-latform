@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Optimistic locking for admin edits of TicketStock (reservations use a conditional UPDATE instead) -->
+    <changeSet id="20261029120000-1" author="ticketrush">
+        <addColumn tableName="ticket_stock">
+            <column name="version" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Last line of defence against overselling: the database itself refuses negative or inflated stock -->
+    <changeSet id="20261029120000-2" author="ticketrush">
+        <sql>
+            ALTER TABLE ticket_stock
+                ADD CONSTRAINT ck_ticket_stock__available_in_range
+                CHECK (available_quantity &gt;= 0 AND available_quantity &lt;= total_quantity)
+        </sql>
+    </changeSet>
+
+    <!-- One hold per (order, ticket type): a retried reserve call cannot take seats twice -->
+    <changeSet id="20261029120000-3" author="ticketrush">
+        <addUniqueConstraint tableName="stock_hold" columnNames="order_id, stock_id"
+                             constraintName="ux_stock_hold__order_id__stock_id"/>
+    </changeSet>
+
+    <!-- Expiry scan: WHERE status = 'HELD' AND expires_at < now ORDER BY expires_at -->
+    <changeSet id="20261029120000-4" author="ticketrush">
+        <createIndex tableName="stock_hold" indexName="ix_stock_hold__status__expires_at">
+            <column name="status"/>
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

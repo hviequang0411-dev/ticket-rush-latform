@@ -1,7 +1,7 @@
 spring:
   cloud:
     function:
-      definition: kafkaConsumer;kafkaProducer
+      definition: ticketTypeEvents
     stream:
       kafka:
         binder:
@@ -9,13 +9,10 @@ spring:
           auto-create-topics: true
           brokers: localhost:9092
       bindings:
-        binding-out-0:
-          content-type: text/plain
+        ticketTypeEvents-in-0:
+          destination: catalog.ticket-type.v1
+          content-type: application/json
           group: inventory
-        kafkaConsumer-in-0:
-          destination: sse-topic
-          content-type: text/plain
-          group: inventory
-        kafkaProducer-out-0:
-          content-type: text/plain
-          group: inventory
+        holdExpired-out-0:
+          destination: inventory.hold-expired.v1
+          content-type: application/json

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.ticketrush.inventory.IntegrationTest;
+import com.ticketrush.inventory.security.AuthoritiesConstants;
 import com.ticketrush.inventory.domain.TicketStock;
 import com.ticketrush.inventory.repository.TicketStockRepository;
 import com.ticketrush.inventory.service.dto.TicketStockDTO;
@@ -32,7 +33,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = AuthoritiesConstants.ADMIN)
 class TicketStockResourceIT {
 
     private static final Long DEFAULT_TICKET_TYPE_ID = 1L;
@@ -108,7 +109,8 @@ class TicketStockResourceIT {
     @AfterEach
     void cleanup() {
         if (insertedTicketStock != null) {
-            ticketStockRepository.delete(insertedTicketStock);
+            // By id: the test may have bumped the @Version, so the instance we inserted is stale
+            ticketStockRepository.deleteById(insertedTicketStock.getId());
             insertedTicketStock = null;
         }
     }

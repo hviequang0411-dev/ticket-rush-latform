@@ -110,6 +110,12 @@ spring:
       config:
         watch:
           enabled: false
+    # Topic contract; mirrored in src/test/resources/config/application.yml
+    stream:
+      bindings:
+        ticketTypeEvents-out-0:
+          destination: catalog.ticket-type.v1
+          content-type: application/json
   docker:
     compose:
       enabled: true

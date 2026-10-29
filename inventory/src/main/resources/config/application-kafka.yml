@@ -1,18 +1,8 @@
 spring:
   cloud:
-    function:
-      definition: ticketTypeEvents
     stream:
       kafka:
         binder:
           replicationFactor: 1
           auto-create-topics: true
           brokers: localhost:9092
-      bindings:
-        ticketTypeEvents-in-0:
-          destination: catalog.ticket-type.v1
-          content-type: application/json
-          group: inventory
-        holdExpired-out-0:
-          destination: inventory.hold-expired.v1
-          content-type: application/json

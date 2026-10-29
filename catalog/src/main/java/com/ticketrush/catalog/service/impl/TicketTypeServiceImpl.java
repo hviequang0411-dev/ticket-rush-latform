@@ -4,13 +4,16 @@ import com.ticketrush.catalog.domain.TicketType;
 import com.ticketrush.catalog.repository.TicketTypeRepository;
 import com.ticketrush.catalog.service.TicketTypeService;
 import com.ticketrush.catalog.service.dto.TicketTypeDTO;
+import com.ticketrush.catalog.service.event.TicketTypeChanged;
 import com.ticketrush.catalog.service.mapper.TicketTypeMapper;
+import java.time.Clock;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +30,20 @@ public class TicketTypeServiceImpl implements TicketTypeService {
 
     private final TicketTypeMapper ticketTypeMapper;
 
-    public TicketTypeServiceImpl(TicketTypeRepository ticketTypeRepository, TicketTypeMapper ticketTypeMapper) {
+    private final ApplicationEventPublisher eventPublisher;
+
+    private final Clock clock;
+
+    public TicketTypeServiceImpl(
+        TicketTypeRepository ticketTypeRepository,
+        TicketTypeMapper ticketTypeMapper,
+        ApplicationEventPublisher eventPublisher,
+        Clock clock
+    ) {
         this.ticketTypeRepository = ticketTypeRepository;
         this.ticketTypeMapper = ticketTypeMapper;
+        this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Override
@@ -37,6 +51,7 @@ public class TicketTypeServiceImpl implements TicketTypeService {
         LOG.debug("Request to save TicketType : {}", ticketTypeDTO);
         TicketType ticketType = ticketTypeMapper.toEntity(ticketTypeDTO);
         ticketType = ticketTypeRepository.save(ticketType);
+        raise(TicketTypeChanged.Type.CREATED, ticketType);
         return ticketTypeMapper.toDto(ticketType);
     }
 
@@ -45,6 +60,7 @@ public class TicketTypeServiceImpl implements TicketTypeService {
         LOG.debug("Request to update TicketType : {}", ticketTypeDTO);
         TicketType ticketType = ticketTypeMapper.toEntity(ticketTypeDTO);
         ticketType = ticketTypeRepository.save(ticketType);
+        raise(TicketTypeChanged.Type.UPDATED, ticketType);
         return ticketTypeMapper.toDto(ticketType);
     }
 
@@ -60,6 +76,10 @@ public class TicketTypeServiceImpl implements TicketTypeService {
                 return existingTicketType;
             })
             .map(ticketTypeRepository::save)
+            .map(ticketType -> {
+                raise(TicketTypeChanged.Type.UPDATED, ticketType);
+                return ticketType;
+            })
             .map(ticketTypeMapper::toDto);
     }
 
@@ -89,5 +109,10 @@ public class TicketTypeServiceImpl implements TicketTypeService {
     public void delete(Long id) {
         LOG.debug("Request to delete TicketType : {}", id);
         ticketTypeRepository.deleteById(id);
+    }
+
+    private void raise(TicketTypeChanged.Type type, TicketType ticketType) {
+        Long eventId = ticketType.getEvent() != null ? ticketType.getEvent().getId() : null;
+        eventPublisher.publishEvent(new TicketTypeChanged(type, ticketType.getId(), eventId, ticketType.getTotalQuantity(), clock.instant()));
     }
 }

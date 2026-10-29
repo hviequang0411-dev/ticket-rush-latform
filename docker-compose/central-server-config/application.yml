@@ -3,8 +3,5 @@ configserver:
   name: Service Registry
   status: Connected to Consul running in Docker
 
-jhipster:
-  security:
-    authentication:
-      jwt:
-        base64-secret: MjRkZjRlMjVkM2I0YzRlY2MwZjFkMTBjNzRlNDI2MWEzMDkxZjMwZDI4Y2VlOGM0OTg0OWZkOWFjMjczYjEwMmQ1MDZjYzk1ZjVkNjcyODA3MmQwMjQwNzYyYmViYmIyOGEyYg==
+# jhipster.security.authentication.jwt.base64-secret is injected per service via the
+# JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET env var (see ../.env.example).

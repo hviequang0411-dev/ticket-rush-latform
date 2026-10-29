@@ -692,7 +692,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "internal",
+      "secret": "${KEYCLOAK_INTERNAL_CLIENT_SECRET}",
       "redirectUris": [],
       "webOrigins": [],
       "notBefore": 0,
@@ -958,7 +958,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "web_app",
+      "secret": "${KEYCLOAK_WEB_APP_CLIENT_SECRET}",
       "redirectUris": [
         "http://localhost:8080/*",
         "https://localhost:8080/*",

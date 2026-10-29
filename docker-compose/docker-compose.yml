@@ -9,10 +9,12 @@ services:
       - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=http://keycloak:9080/realms/jhipster
       - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=web_app
-      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=web_app
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=${KEYCLOAK_WEB_APP_CLIENT_SECRET:?}
       - SPRING_R2DBC_URL=r2dbc:postgresql://gateway-postgresql:5432/gateway
       - SPRING_R2DBC_USERNAME=gateway
-      - SPRING_R2DBC_PASSWORD=
+      - SPRING_R2DBC_PASSWORD=${GATEWAY_DB_PASSWORD:?}
+      - SPRING_LIQUIBASE_PASSWORD=${GATEWAY_DB_PASSWORD:?}
+      - JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET=${JHIPSTER_JWT_BASE64_SECRET:?}
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://gateway-postgresql:5432/gateway
     ports:
       - 8080:8080
@@ -32,7 +34,7 @@ services:
     image: postgres:18.6
     environment:
       - POSTGRES_USER=gateway
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_PASSWORD=${GATEWAY_DB_PASSWORD:?}
     healthcheck:
       test:
         - CMD-SHELL
@@ -51,10 +53,11 @@ services:
       - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI=http://keycloak:9080/realms/jhipster
       - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID=internal
-      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=internal
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET=${KEYCLOAK_INTERNAL_CLIENT_SECRET:?}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://catalog-postgresql:5432/catalog
       - SPRING_DATASOURCE_USERNAME=catalog
-      - SPRING_DATASOURCE_PASSWORD=
+      - SPRING_DATASOURCE_PASSWORD=${CATALOG_DB_PASSWORD:?}
+      - JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET=${JHIPSTER_JWT_BASE64_SECRET:?}
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://catalog-postgresql:5432/catalog
     healthcheck:
       test:
@@ -72,7 +75,7 @@ services:
     image: postgres:18.6
     environment:
       - POSTGRES_USER=catalog
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_PASSWORD=${CATALOG_DB_PASSWORD:?}
     healthcheck:
       test:
         - CMD-SHELL
@@ -104,8 +107,10 @@ services:
       - ./realm-config/keycloak-health-check.sh:/opt/keycloak/health-check.sh
     environment:
       - KC_DB=dev-file
-      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USER:?}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:?}
+      - KEYCLOAK_WEB_APP_CLIENT_SECRET=${KEYCLOAK_WEB_APP_CLIENT_SECRET:?}
+      - KEYCLOAK_INTERNAL_CLIENT_SECRET=${KEYCLOAK_INTERNAL_CLIENT_SECRET:?}
       - KC_FEATURES=scripts
       - KC_HTTP_PORT=9080
       - KC_HTTPS_PORT=9443
@@ -119,3 +124,5 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+      # Keycloak dev mode rebuilds Quarkus on boot (~1-2 min); don't count that as failures
+      start_period: 180s

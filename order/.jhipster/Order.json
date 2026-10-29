@@ -1,0 +1,87 @@
+{
+  "annotations": {
+    "changelogDate": "20231222135034"
+  },
+  "applications": ["gateway", "order"],
+  "clientRootFolder": "order",
+  "databaseType": "sql",
+  "dto": "mapstruct",
+  "entityTableName": "ticket_order",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "code",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique", "maxlength"],
+      "fieldValidateRulesMaxlength": "32"
+    },
+    {
+      "fieldName": "userLogin",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "100"
+    },
+    {
+      "fieldName": "status",
+      "fieldType": "OrderStatus",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "PENDING,RESERVED,AWAITING_PAYMENT,CONFIRMED,CANCELLED,EXPIRED,FAILED"
+    },
+    {
+      "fieldName": "totalAmount",
+      "fieldType": "BigDecimal",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "0"
+    },
+    {
+      "fieldName": "currency",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "minlength", "maxlength"],
+      "fieldValidateRulesMaxlength": "3",
+      "fieldValidateRulesMinlength": "3"
+    },
+    {
+      "fieldName": "idempotencyKey",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique", "maxlength"],
+      "fieldValidateRulesMaxlength": "64"
+    },
+    {
+      "fieldName": "failureReason",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "255"
+    },
+    {
+      "fieldName": "expiresAt",
+      "fieldType": "Instant"
+    },
+    {
+      "fieldName": "createdAt",
+      "fieldType": "Instant",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "updatedAt",
+      "fieldType": "Instant"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "microserviceName": "order",
+  "name": "Order",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityName": "orderItem",
+      "otherEntityRelationshipName": "order",
+      "relationshipName": "items",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceImpl"
+}

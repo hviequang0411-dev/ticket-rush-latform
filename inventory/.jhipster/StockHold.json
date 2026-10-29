@@ -1,0 +1,56 @@
+{
+  "annotations": {
+    "changelogDate": "20261029055901"
+  },
+  "applications": ["inventory"],
+  "clientRootFolder": "inventory",
+  "databaseType": "sql",
+  "documentation": "Seats held for an order for 10 minutes; one row per (order, ticket type).",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "orderId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "quantity",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "1"
+    },
+    {
+      "fieldName": "status",
+      "fieldType": "HoldStatus",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "HELD,CONFIRMED,RELEASED,EXPIRED"
+    },
+    {
+      "fieldName": "expiresAt",
+      "fieldType": "Instant",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "createdAt",
+      "fieldType": "Instant",
+      "fieldValidateRules": ["required"]
+    }
+  ],
+  "microserviceName": "inventory",
+  "name": "StockHold",
+  "relationships": [
+    {
+      "otherEntityName": "ticketStock",
+      "relationshipName": "stock",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one",
+      "relationshipValidateRules": "required"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceImpl"
+}

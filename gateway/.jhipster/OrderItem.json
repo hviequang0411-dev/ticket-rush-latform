@@ -1,0 +1,49 @@
+{
+  "annotations": {
+    "changelogDate": "20231222135134"
+  },
+  "applications": ["gateway", "order"],
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "eventId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "ticketTypeId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "quantity",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required", "min", "max"],
+      "fieldValidateRulesMax": "10",
+      "fieldValidateRulesMin": "1"
+    },
+    {
+      "fieldName": "unitPrice",
+      "fieldType": "BigDecimal",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "0"
+    }
+  ],
+  "microserviceName": "order",
+  "name": "OrderItem",
+  "relationships": [
+    {
+      "otherEntityName": "order",
+      "otherEntityRelationshipName": "items",
+      "relationshipName": "order",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one",
+      "relationshipValidateRules": "required"
+    }
+  ],
+  "service": "serviceImpl"
+}

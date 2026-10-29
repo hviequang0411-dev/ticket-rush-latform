@@ -9,12 +9,15 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 /**
  * A Event.
  */
 @Entity
 @Table(name = "event")
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Event implements Serializable {
 
@@ -59,6 +62,7 @@ public class Event implements Serializable {
     private String posterUrl;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "event")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @JsonIgnoreProperties(value = { "event" }, allowSetters = true)
     private Set<TicketType> ticketTypeses = new HashSet<>();
 

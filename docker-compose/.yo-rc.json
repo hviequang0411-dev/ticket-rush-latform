@@ -1,6 +1,6 @@
 {
   "generator-jhipster": {
-    "appsFolders": ["gateway", "catalog"],
+    "appsFolders": ["gateway", "catalog", "inventory", "order"],
     "clusteredDbApps": [],
     "deploymentType": "docker-compose",
     "directoryPath": "../",

@@ -1,0 +1,31 @@
+{
+  "gatewayApp": {
+    "inventoryTicketStock": {
+      "home": {
+        "title": "Ticket Stocks",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Ticket Stock",
+        "createOrEditLabel": "Create or edit a Ticket Stock",
+        "notFound": "No Ticket Stocks found"
+      },
+      "delete": {
+        "question": "Are you sure you want to delete Ticket Stock {{ id }}?"
+      },
+      "detail": {
+        "title": "Ticket Stock"
+      },
+      "id": "Id",
+      "ticketTypeId": "Ticket Type Id",
+      "eventId": "Event Id",
+      "totalQuantity": "Total Quantity",
+      "availableQuantity": "Available Quantity"
+    }
+  },
+  "inventoryApp": {
+    "inventoryTicketStock": {
+      "created": "A new Ticket Stock is created with identifier {{ param }}",
+      "updated": "A Ticket Stock is updated with identifier {{ param }}",
+      "deleted": "A Ticket Stock is deleted with identifier {{ param }}"
+    }
+  }
+}

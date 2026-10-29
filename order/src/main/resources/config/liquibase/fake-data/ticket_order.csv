@@ -1,0 +1,31 @@
+id;code;user_login;status;total_amount;currency;idempotency_key;failure_reason;expires_at;created_at;updated_at
+1;off;haze black;AWAITING_PAYMENT;31513.14;eve;tight;bitterly fold whenever;2023-12-22T10:52:43;2023-12-22T08:14:05;2023-12-22T01:15:10
+2;gah;opposite bootleg worthless;AWAITING_PAYMENT;17022.81;bli;delight about accidentally;finally caring on;2023-12-22T06:14:11;2023-12-21T19:38:23;2023-12-22T11:33:57
+3;progress idle;political;CONFIRMED;9565.88;plu;yuck;times unused;2023-12-22T04:27:27;2023-12-21T20:36:10;2023-12-21T18:44:04
+4;through gut aha;beneath;RESERVED;31726.4;sha;powerfully worth;save;2023-12-22T03:59:10;2023-12-22T05:02:50;2023-12-22T04:04:40
+5;transplant;multicolored;RESERVED;12697.55;sin;pish concerning;surprise analyse and;2023-12-22T08:37:14;2023-12-21T18:17:28;2023-12-21T13:59:01
+6;portly gee;responsibility;CONFIRMED;30816.01;zow;unnecessarily supposing;near openly;2023-12-21T22:33:57;2023-12-22T01:42:25;2023-12-21T19:46:56
+7;salty after huddle;acclaimed microblog worth;CONFIRMED;15286.85;ew ;innocently;whoa;2023-12-22T03:52:47;2023-12-22T11:45:10;2023-12-21T21:15:30
+8;yet randomize whereas;rapid;RESERVED;1109.83;whe;only;reporter phooey;2023-12-22T02:32:27;2023-12-21T15:01:37;2023-12-21T21:47:10
+9;mainstream wring once;clearly;CANCELLED;3489.07;cor;furiously;adolescent among;2023-12-21T17:18:52;2023-12-22T13:49:56;2023-12-22T07:34:37
+10;tut;hopelessly brr energetically;RESERVED;14549.33;yum;thump convoke;eek misguided;2023-12-22T02:16:37;2023-12-21T20:50:28;2023-12-22T04:00:36
+11;iridescence drat feminize;potentially athwart;CONFIRMED;4540.07;er ;uh-huh;hm secret aside;2023-12-22T06:57:35;2023-12-21T17:36:23;2023-12-21T15:47:37
+12;intent issue;speedily testify untried;CANCELLED;24481.45;apr;but whose or;until championship;2023-12-21T22:08:03;2023-12-21T19:24:46;2023-12-21T20:10:55
+13;gosh bitterly;whereas pfft than;EXPIRED;28960.32;kno;though bowed;likewise minus;2023-12-22T05:04:56;2023-12-22T00:32:02;2023-12-22T00:39:53
+14;eventually;rapidly cycle;CONFIRMED;4477.45;kno;finally;fooey floss;2023-12-22T13:32:08;2023-12-22T06:22:36;2023-12-21T19:51:31
+15;gnaw woot;concerning;AWAITING_PAYMENT;637.12;who;blissfully;worthwhile afraid;2023-12-21T16:21:14;2023-12-21T16:34:28;2023-12-21T15:30:44
+16;heavily eek;well-groomed;AWAITING_PAYMENT;17313.01;bef;judgementally softly;instead whoa inasmuch;2023-12-22T06:53:13;2023-12-22T05:44:31;2023-12-21T21:09:03
+17;incidentally;or;AWAITING_PAYMENT;18360.49;cir;gigantic in-joke boo;gosh er freely;2023-12-21T16:53:46;2023-12-21T16:10:17;2023-12-21T14:57:59
+18;lava well-documented;amid meh responsible;RESERVED;17039.17;slo;on blah generously;forceful silently over;2023-12-21T14:08:12;2023-12-21T21:20:56;2023-12-21T16:31:20
+19;condense;eek;CANCELLED;6677.25;cla;whoever inasmuch genuine;stale broadly vanadyl;2023-12-22T11:00:11;2023-12-22T01:52:55;2023-12-21T20:35:01
+20;across angrily;furthermore;FAILED;14789.81;ske;sleepy schedule;that;2023-12-21T16:05:50;2023-12-22T05:30:45;2023-12-22T06:24:57
+21;blissfully whose since;chops er jagged;EXPIRED;23125.82;ala;expansion;um exactly;2023-12-21T14:06:50;2023-12-22T00:46:46;2023-12-22T04:34:54
+22;long meatloaf;average odd subtle;PENDING;4862.9;sha;axe mothball oof;whenever mousse in;2023-12-21T17:11:01;2023-12-22T04:22:23;2023-12-21T15:19:37
+23;shanghai;circumnavigate;FAILED;16740.09;gee;digitize;if;2023-12-22T01:02:26;2023-12-21T15:39:38;2023-12-21T20:21:37
+24;fluffy;unnaturally amongst selfishly;EXPIRED;21865.26;gee;mould smarten;or gadzooks excluding;2023-12-22T10:48:38;2023-12-22T09:37:58;2023-12-21T16:39:36
+25;whereas in;utterly;AWAITING_PAYMENT;23130.89;jun;hmph pro;merrily;2023-12-22T12:36:14;2023-12-22T12:43:55;2023-12-21T18:12:36
+26;antagonize ample vacation;yahoo;FAILED;16498.95;out;which duh wholly;siege inside menacing;2023-12-22T05:34:21;2023-12-21T23:38:49;2023-12-21T22:00:22
+27;mid concerning;wide-eyed gleaming;FAILED;4065.56;ext;home annex regarding;limp;2023-12-22T05:00:03;2023-12-21T22:05:55;2023-12-22T07:40:43
+28;too while;as weakly aha;FAILED;3977.07;eve;because drat eek;wafer sign under;2023-12-21T18:11:39;2023-12-22T09:42:29;2023-12-22T07:11:12
+29;likewise gadzooks;lotion yowza like;EXPIRED;4547.3;unt;whoa wherever between;boohoo ack;2023-12-21T16:47:34;2023-12-22T05:22:23;2023-12-22T07:38:36
+30;alongside;jury fabricate;PENDING;13686.13;san;hm trash;however;2023-12-22T13:00:41;2023-12-21T19:19:51;2023-12-22T10:42:13

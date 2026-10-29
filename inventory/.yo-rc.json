@@ -1,0 +1,32 @@
+{
+  "generator-jhipster": {
+    "applicationIndex": 2,
+    "applicationType": "microservice",
+    "authenticationType": "oauth2",
+    "baseName": "inventory",
+    "buildTool": "maven",
+    "cacheProvider": "no",
+    "creationTimestamp": 1793253571137,
+    "databaseType": "sql",
+    "defaultCommand": "app",
+    "devDatabaseType": "postgresql",
+    "enableHibernateCache": false,
+    "entities": ["TicketStock", "StockHold"],
+    "gatewayServerPort": "8080",
+    "jhipsterVersion": "9.4.0",
+    "jwtSecretKey": "M2I2ZmQ2YjlhNGVkMTdjNGFjYjQ0NmU4MGIyMDYxZGVjNjFmNTU1ZjNmOTQ1MzhkNGNkYTc2MTkxZTI3ODM5NmJiNGE1ODZhMjI4YjExYmUzNzgxZWQyNTY2ODJiZTJjYjllOWQ4MTQxNjc1MmZiNjI1MDFmZThhNDVmNzE0ODg=",
+    "languages": ["en", "vi"],
+    "lastLiquibaseTimestamp": 1793253541000,
+    "messageBroker": "kafka",
+    "nativeLanguage": "en",
+    "packageName": "com.ticketrush.inventory",
+    "prodDatabaseType": "postgresql",
+    "promptValues": {
+      "nativeLanguage": "en"
+    },
+    "reactive": false,
+    "serverPort": "8082",
+    "serviceDiscoveryType": "consul",
+    "skipClient": true
+  }
+}

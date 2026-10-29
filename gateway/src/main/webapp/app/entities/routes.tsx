@@ -11,6 +11,9 @@ import PageNotFound from 'app/shared/error/page-not-found';
 import Event from './catalog/event';
 import TicketType from './catalog/ticket-type';
 import Venue from './catalog/venue';
+import TicketStock from './inventory/ticket-stock';
+import Order from './order/order';
+import OrderItem from './order/order-item';
 import entitiesReducers from './reducers';
 /* jhipster-needle-add-route-import - JHipster will add routes here */
 
@@ -23,8 +26,11 @@ export default () => {
       <ErrorBoundaryRoutes>
         {/* prettier-ignore */}
         <Route path="/venue/*" element={<Venue />} />
+        <Route path="/ticket-stock/*" element={<TicketStock />} />
         <Route path="/event/*" element={<Event />} />
+        <Route path="/order/*" element={<Order />} />
         <Route path="/ticket-type/*" element={<TicketType />} />
+        <Route path="/order-item/*" element={<OrderItem />} />
         {/* jhipster-needle-add-route-path - JHipster will add routes here */}
         <Route path="*" element={<PageNotFound />} />
       </ErrorBoundaryRoutes>

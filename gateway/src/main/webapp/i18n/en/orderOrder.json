@@ -1,0 +1,38 @@
+{
+  "gatewayApp": {
+    "orderOrder": {
+      "home": {
+        "title": "Orders",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Order",
+        "createOrEditLabel": "Create or edit a Order",
+        "notFound": "No Orders found"
+      },
+      "delete": {
+        "question": "Are you sure you want to delete Order {{ id }}?"
+      },
+      "detail": {
+        "title": "Order"
+      },
+      "id": "Id",
+      "code": "Code",
+      "userLogin": "User Login",
+      "status": "Status",
+      "totalAmount": "Total Amount",
+      "currency": "Currency",
+      "idempotencyKey": "Idempotency Key",
+      "failureReason": "Failure Reason",
+      "expiresAt": "Expires At",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "items": "Items"
+    }
+  },
+  "orderApp": {
+    "orderOrder": {
+      "created": "A new Order is created with identifier {{ param }}",
+      "updated": "A Order is updated with identifier {{ param }}",
+      "deleted": "A Order is deleted with identifier {{ param }}"
+    }
+  }
+}

@@ -2,6 +2,7 @@ package com.ticketrush.catalog;
 
 import com.ticketrush.catalog.config.AsyncSyncConfiguration;
 import com.ticketrush.catalog.config.DatabaseTestcontainer;
+import com.ticketrush.catalog.config.RedisTestContainer;
 import com.ticketrush.catalog.config.TestSecurityConfiguration;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
         TestSecurityConfiguration.class,
         com.ticketrush.catalog.config.JacksonHibernateConfiguration.class,
         DatabaseTestcontainer.class,
+        RedisTestContainer.class,
     }
 )
 public @interface IntegrationTest {}

@@ -8,8 +8,11 @@
         "main": "Entities",
         "jhipster-needle-menu-add-entry": "JHipster will add additional entities here (do not translate!)",
         "catalogVenue": "Venue",
+        "inventoryTicketStock": "Ticket Stock",
         "catalogEvent": "Event",
-        "catalogTicketType": "Ticket Type"
+        "orderOrder": "Order",
+        "catalogTicketType": "Ticket Type",
+        "orderOrderItem": "Order Item"
       },
       "account": {
         "main": "Account",

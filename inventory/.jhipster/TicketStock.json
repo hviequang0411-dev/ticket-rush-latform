@@ -1,0 +1,44 @@
+{
+  "annotations": {
+    "changelogDate": "20231222134934"
+  },
+  "applications": ["gateway", "inventory"],
+  "clientRootFolder": "inventory",
+  "databaseType": "sql",
+  "documentation": "Live stock per ticket type. Decremented only by a conditional UPDATE (see ADR 0003).",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "ticketTypeId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required", "unique"]
+    },
+    {
+      "fieldName": "eventId",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "totalQuantity",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "0"
+    },
+    {
+      "fieldName": "availableQuantity",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required", "min"],
+      "fieldValidateRulesMin": "0"
+    }
+  ],
+  "microserviceName": "inventory",
+  "name": "TicketStock",
+  "pagination": "pagination",
+  "relationships": [],
+  "searchEngine": "no",
+  "service": "serviceImpl"
+}

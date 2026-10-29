@@ -1,5 +1,5 @@
 /*
- * TicketRush - Phase 1: gateway + catalog
+ * TicketRush - Phase 2: gateway, catalog, inventory, order
  * Target: generator-jhipster 9.4.0 (Spring Boot 4.1.1, Spring Cloud 2025.1.3, Java 21)
  *
  * Notes:
@@ -7,7 +7,9 @@
  *   non-reactive gateway unless --experimental is passed.
  * - Ticket availability is NOT stored in catalog. totalQuantity here is the
  *   configured capacity; live stock and holds belong to the inventory service (phase 2).
- * - Redis cache and Kafka are deliberately left out until phase 2.
+ * - Cross-service references (ticketTypeId, eventId, orderId) are plain ids, not
+ *   relationships: each service owns its database, so there are no cross-DB foreign keys.
+ * - StockHold is internal to inventory and is not exposed in the gateway UI.
  */
 
 application {
@@ -28,7 +30,7 @@ application {
     languages [en, vi]
     testFrameworks []
   }
-  entities Venue, Event, TicketType
+  entities Venue, Event, TicketType, TicketStock, Order, OrderItem
 }
 
 application {
@@ -43,13 +45,60 @@ application {
     databaseType sql
     devDatabaseType postgresql
     prodDatabaseType postgresql
-    cacheProvider no
-    enableHibernateCache false
+    cacheProvider redis
+    enableHibernateCache true
+    messageBroker kafka
     buildTool maven
     nativeLanguage en
     languages [en, vi]
   }
   entities Venue, Event, TicketType
+}
+
+application {
+  config {
+    baseName inventory
+    applicationType microservice
+    skipClient true
+    packageName com.ticketrush.inventory
+    serverPort 8082
+    reactive false
+    authenticationType oauth2
+    serviceDiscoveryType consul
+    databaseType sql
+    devDatabaseType postgresql
+    prodDatabaseType postgresql
+    cacheProvider no
+    enableHibernateCache false
+    messageBroker kafka
+    buildTool maven
+    nativeLanguage en
+    languages [en, vi]
+  }
+  entities TicketStock, StockHold
+}
+
+application {
+  config {
+    baseName order
+    applicationType microservice
+    skipClient true
+    packageName com.ticketrush.order
+    serverPort 8083
+    reactive false
+    authenticationType oauth2
+    serviceDiscoveryType consul
+    databaseType sql
+    devDatabaseType postgresql
+    prodDatabaseType postgresql
+    cacheProvider no
+    enableHibernateCache false
+    messageBroker kafka
+    buildTool maven
+    nativeLanguage en
+    languages [en, vi]
+  }
+  entities Order, OrderItem
 }
 
 enum EventStatus {
@@ -96,15 +145,87 @@ relationship OneToMany {
   Event{ticketTypes} to TicketType{event(name) required}
 }
 
+// ---------- inventory ----------
+
+/** Live stock per ticket type. Decremented only by a conditional UPDATE (see ADR 0003). */
+entity TicketStock {
+  id Long
+  ticketTypeId Long required unique
+  eventId Long required
+  totalQuantity Integer required min(0)
+  availableQuantity Integer required min(0)
+}
+
+enum HoldStatus {
+  HELD,
+  CONFIRMED,
+  RELEASED,
+  EXPIRED
+}
+
+/** Seats held for an order for 10 minutes; one row per (order, ticket type). */
+entity StockHold {
+  id Long
+  orderId Long required
+  quantity Integer required min(1)
+  status HoldStatus required
+  expiresAt Instant required
+  createdAt Instant required
+}
+
+relationship ManyToOne {
+  StockHold{stock required} to TicketStock
+}
+
+// ---------- order ----------
+
+enum OrderStatus {
+  PENDING,
+  RESERVED,
+  AWAITING_PAYMENT,
+  CONFIRMED,
+  CANCELLED,
+  EXPIRED,
+  FAILED
+}
+
+entity Order(ticket_order) {
+  id Long
+  code String required unique maxlength(32)
+  userLogin String required maxlength(100)
+  status OrderStatus required
+  totalAmount BigDecimal required min(0)
+  currency String required minlength(3) maxlength(3)
+  idempotencyKey String required unique maxlength(64)
+  failureReason String maxlength(255)
+  expiresAt Instant
+  createdAt Instant required
+  updatedAt Instant
+}
+
+entity OrderItem {
+  id Long
+  eventId Long required
+  ticketTypeId Long required
+  quantity Integer required min(1) max(10)
+  unitPrice BigDecimal required min(0)
+}
+
+relationship OneToMany {
+  Order{items} to OrderItem{order required}
+}
+
 service * with serviceImpl
 dto * with mapstruct
-paginate Venue, Event with pagination
-filter Event
+paginate Venue, Event, TicketStock, Order with pagination
+filter Event, Order
 microservice Venue, Event, TicketType with catalog
+microservice TicketStock, StockHold with inventory
+microservice Order, OrderItem with order
 
 deployment {
   deploymentType docker-compose
-  appsFolders [gateway, catalog]
+  appsFolders [gateway, catalog, inventory, order]
   serviceDiscoveryType consul
   monitoring no
 }

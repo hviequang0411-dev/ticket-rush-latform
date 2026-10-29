@@ -36,12 +36,14 @@
     <logger name="jakarta.xml.bind" level="WARN"/>
     <logger name="jdk.event.security" level="INFO"/>
     <logger name="io.github.resilience4j" level="INFO"/>
+    <logger name="org.redisson" level="WARN" />
     <logger name="com.netflix" level="WARN"/>
     <logger name="com.netflix.config.sources.URLConfigurationSource" level="ERROR"/>
     <logger name="com.netflix.discovery" level="INFO"/>
     <logger name="com.ryantenney" level="WARN"/>
     <logger name="com.sun" level="WARN"/>
     <logger name="com.zaxxer" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
     <logger name="org.apache" level="WARN"/>
     <logger name="org.apache.catalina.startup.DigesterFactory" level="OFF"/>
     <logger name="org.bson" level="WARN"/>
@@ -66,6 +68,7 @@
     <logger name="_org.springframework.web.servlet.HandlerMapping.Mappings" level="INFO"/>
     <logger name="org.springframework.boot.docker" level="WARN"/>
     <logger name="java.lang.ProcessBuilder" level="INFO"/>
+    <logger name="org.apache.kafka" level="WARN"/>
     <logger name="liquibase" level="WARN"/>
     <logger name="LiquibaseSchemaResolver" level="INFO"/>
     <!-- jhipster-needle-logback-add-log - JHipster will add a new log with level -->

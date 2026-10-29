@@ -1,0 +1,31 @@
+{
+  "generator-jhipster": {
+    "applicationIndex": 3,
+    "applicationType": "microservice",
+    "authenticationType": "oauth2",
+    "baseName": "order",
+    "buildTool": "maven",
+    "cacheProvider": "no",
+    "creationTimestamp": 1793253677524,
+    "databaseType": "sql",
+    "defaultCommand": "app",
+    "devDatabaseType": "postgresql",
+    "enableHibernateCache": false,
+    "entities": ["Order", "OrderItem"],
+    "gatewayServerPort": "8080",
+    "jhipsterVersion": "9.4.0",
+    "jwtSecretKey": "NTY3MTZkNGYwNjM3MjU3YWQ5M2RhNTVjZjczNWZmYjBjMTUzNzc1NTc2NTQ0OWY1ZTY1ZGM2Y2ViNGZhMTQ5NDlhYTFjMjc2Y2Q2ODNhMGMxMWUxNGNhYjcyOTAyZDI2NTJhNTUzOGZkNDU3Y2QyMmIyYTJlZWNjMGZkYzgwMzM=",
+    "languages": ["en", "vi"],
+    "messageBroker": "kafka",
+    "nativeLanguage": "en",
+    "packageName": "com.ticketrush.order",
+    "prodDatabaseType": "postgresql",
+    "promptValues": {
+      "nativeLanguage": "en"
+    },
+    "reactive": false,
+    "serverPort": "8083",
+    "serviceDiscoveryType": "consul",
+    "skipClient": true
+  }
+}

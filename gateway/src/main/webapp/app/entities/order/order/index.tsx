@@ -4,18 +4,13 @@ import { Route } from 'react-router';
 import ErrorBoundaryRoutes from 'app/shared/error/error-boundary-routes';
 
 import Order from './order';
-import OrderDeleteDialog from './order-delete-dialog';
 import OrderDetail from './order-detail';
-import OrderUpdate from './order-update';
 
 const OrderRoutes = () => (
   <ErrorBoundaryRoutes>
     <Route index element={<Order />} />
-    <Route path="new" element={<OrderUpdate />} />
     <Route path=":id">
       <Route index element={<OrderDetail />} />
-      <Route path="edit" element={<OrderUpdate />} />
-      <Route path="delete" element={<OrderDeleteDialog />} />
     </Route>
   </ErrorBoundaryRoutes>
 );

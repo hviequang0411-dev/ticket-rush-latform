@@ -30,7 +30,8 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <start-class>com.ticketrush.catalog.CatalogApp</start-class>
-        <argLine>-Xmx1G</argLine>
+        <!-- UTC avoids JVM default zones PostgreSQL 18 rejects (e.g. Windows "Asia/Saigon") -->
+        <argLine>-Xmx1G -Duser.timezone=UTC</argLine>
         <m2e.apt.activation>jdt_apt</m2e.apt.activation>
         <run.addResources>false</run.addResources>
         <spring-boot.version>${project.parent.version}</spring-boot.version>

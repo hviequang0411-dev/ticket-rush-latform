@@ -257,6 +257,8 @@ public class CheckoutService {
     private void releaseQuietly(Long orderId) {
         try {
             inventoryClient.release(orderId);
+        } catch (HttpClientErrorException.Conflict e) {
+            LOG.debug("Order {} had no holds to release", orderId);
         } catch (RestClientException e) {
             // Holds that were taken will still expire on their own
             LOG.warn("Could not release holds of order {}: {}", orderId, e.getMessage());

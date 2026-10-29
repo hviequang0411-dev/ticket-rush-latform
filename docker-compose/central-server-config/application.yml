@@ -5,3 +5,13 @@ configserver:
 
 # jhipster.security.authentication.jwt.base64-secret is injected per service via the
 # JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET env var (see ../.env.example).
+
+spring:
+  cloud:
+    consul:
+      discovery:
+        # Only return instances whose health check passes: after a restart the old registration lingers as
+        # 'critical' and the load balancer would otherwise keep picking it
+        query-passing: true
+        # Remove registrations of instances that died without deregistering
+        health-check-critical-timeout: 1m

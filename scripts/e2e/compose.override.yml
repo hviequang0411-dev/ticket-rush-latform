@@ -1,0 +1,11 @@
+# Shorter holds so the end-to-end test can watch one expire:
+#   docker compose -f docker-compose/docker-compose.yml -f scripts/e2e/compose.override.yml up -d --wait
+services:
+  inventory:
+    environment:
+      - APPLICATION_RESERVATION_HOLD_TTL=PT20S
+      - APPLICATION_RESERVATION_EXPIRY_SCAN_INTERVAL=PT2S
+  gateway:
+    # 8080 is often taken on a dev machine; the e2e script reads TICKETRUSH_GATEWAY (default http://localhost:8088)
+    ports: !override
+      - 8088:8080

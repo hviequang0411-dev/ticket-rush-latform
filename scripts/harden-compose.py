@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Re-apply local hardening to JHipster-generated docker-compose files.
+"""Re-apply local changes to JHipster-generated docker-compose files.
 
 JHipster overwrites docker-compose/ on every `jhipster jdl` run. Run this script right after
-generating so secrets come from docker-compose/.env instead of being hard-coded:
+generating so that:
+- secrets come from docker-compose/.env instead of being hard-coded
+- the Keycloak client `internal` (service-to-service calls) carries ROLE_SERVICE in its tokens
+- single-node Kafka can create its internal topics (without them no consumer group ever works)
+- services only discover healthy instances, so a restarted service is not called at its old address
 
     python scripts/harden-compose.py
 
 It is idempotent: running it twice leaves the files unchanged.
 """
+import json
 import re
 import sys
 from pathlib import Path
@@ -63,6 +68,19 @@ def harden_compose(text: str) -> str:
         "      - KEYCLOAK_INTERNAL_CLIENT_SECRET=${KEYCLOAK_INTERNAL_CLIENT_SECRET:?}\n",
     )
 
+    # apache/kafka-native drops its single-node defaults as soon as any KAFKA_* variable is set, so internal topics
+    # fall back to replication factor 3 and can't be created on one broker: consumer groups then never get a
+    # coordinator and silently receive nothing
+    kafka_anchor = "      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0\n"
+    if kafka_anchor in text and "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR" not in text:
+        text = text.replace(
+            kafka_anchor,
+            kafka_anchor
+            + "      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1\n"
+            "      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1\n"
+            "      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1\n",
+        )
+
     # Keycloak dev mode rebuilds Quarkus on boot (~1-2 min); don't count that as failures
     kc_health = '      test: "bash /opt/keycloak/health-check.sh"\n      interval: 5s\n      timeout: 5s\n      retries: 20\n'
     if kc_health in text and "start_period" not in text.split("keycloak:")[-1]:
@@ -74,12 +92,75 @@ def harden_compose(text: str) -> str:
     return text
 
 
+SERVICE_ROLE = "ROLE_SERVICE"
+
+
 def harden_realm(text: str) -> str:
     text = text.replace('"secret": "web_app"', '"secret": "${KEYCLOAK_WEB_APP_CLIENT_SECRET}"')
-    return text.replace('"secret": "internal"', '"secret": "${KEYCLOAK_INTERNAL_CLIENT_SECRET}"')
+    text = text.replace('"secret": "internal"', '"secret": "${KEYCLOAK_INTERNAL_CLIENT_SECRET}"')
+    realm = json.loads(text)
+
+    roles = realm["roles"]["realm"]
+    if not any(role["name"] == SERVICE_ROLE for role in roles):
+        roles.append(
+            {
+                "name": SERVICE_ROLE,
+                "description": "TicketRush services calling each other's internal APIs",
+                "composite": False,
+                "clientRole": False,
+                "containerId": realm["id"],
+                "attributes": {},
+            }
+        )
+
+    internal = next(client for client in realm["clients"] if client["clientId"] == "internal")
+    # The `jhipster` scope maps realm roles to the `roles` claim the services read
+    if "jhipster" not in internal["defaultClientScopes"]:
+        internal["defaultClientScopes"].append("jhipster")
+
+    users = realm.setdefault("users", [])
+    if not any(user.get("serviceAccountClientId") == "internal" for user in users):
+        users.append(
+            {
+                "username": "service-account-internal",
+                "enabled": True,
+                "serviceAccountClientId": "internal",
+                "realmRoles": ["default-roles-jhipster", SERVICE_ROLE],
+            }
+        )
+    return json.dumps(realm, indent=2, ensure_ascii=False) + "\n"
+
+
+CONSUL_DISCOVERY = """
+spring:
+  cloud:
+    consul:
+      discovery:
+        # Only return instances whose health check passes: after a restart the old registration lingers as
+        # 'critical' and the load balancer would otherwise keep picking it
+        query-passing: true
+        # Remove registrations of instances that died without deregistering
+        health-check-critical-timeout: 1m
+"""
+
+
+GATEWAY_CENTRAL = ROOT / "central-server-config" / "gateway.yml"
+
+GATEWAY_DISCOVERY = """# Gateway-only overrides of application.yml (loaded into Consul as config/gateway/data)
+spring:
+  cloud:
+    consul:
+      discovery:
+        # The discovery route locator builds /services/{name}/** routes from the service list. With query-passing a
+        # restarted service is missing from that list while its first health check is pending, its route is dropped,
+        # and nothing re-adds it: Consul does not signal health changes as catalog changes.
+        query-passing: false
+"""
 
 
 def harden_central(text: str) -> str:
+    if "query-passing" not in text:
+        text = text.rstrip("\n") + "\n" + CONSUL_DISCOVERY
     return re.sub(
         r"\njhipster:\n  security:\n    authentication:\n      jwt:\n        base64-secret: \S+\n",
         "\n# jhipster.security.authentication.jwt.base64-secret is injected per service via the\n"
@@ -94,6 +175,10 @@ def main() -> int:
         after = fn(before)
         path.write_text(after, encoding="utf-8", newline="\n")
         print(f"{'updated ' if after != before else 'unchanged'} {path.relative_to(ROOT.parent)}")
+
+    if not GATEWAY_CENTRAL.exists() or GATEWAY_CENTRAL.read_text(encoding="utf-8") != GATEWAY_DISCOVERY:
+        GATEWAY_CENTRAL.write_text(GATEWAY_DISCOVERY, encoding="utf-8", newline="\n")
+        print(f"updated  {GATEWAY_CENTRAL.relative_to(ROOT.parent)}")
 
     leftovers = re.findall(
         r"^.*(?:PASSWORD=$|HOST_AUTH_METHOD=trust|CLIENT_SECRET=(?:web_app|internal)|ADMIN_PASSWORD=admin).*$",

@@ -1,0 +1,9 @@
+# Gateway-only overrides of application.yml (loaded into Consul as config/gateway/data)
+spring:
+  cloud:
+    consul:
+      discovery:
+        # The discovery route locator builds /services/{name}/** routes from the service list. With query-passing a
+        # restarted service is missing from that list while its first health check is pending, its route is dropped,
+        # and nothing re-adds it: Consul does not signal health changes as catalog changes.
+        query-passing: false

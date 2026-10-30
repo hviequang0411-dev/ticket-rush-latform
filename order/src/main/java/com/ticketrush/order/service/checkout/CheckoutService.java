@@ -9,6 +9,8 @@ import com.ticketrush.order.repository.OrderItemRepository;
 import com.ticketrush.order.repository.OrderRepository;
 import com.ticketrush.order.service.saga.OrderSaga;
 import java.math.BigDecimal;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -55,6 +57,8 @@ public class CheckoutService {
 
     private final OrderSaga orderSaga;
 
+    private final MeterRegistry meterRegistry;
+
     public CheckoutService(
         OrderRepository orderRepository,
         OrderItemRepository orderItemRepository,
@@ -63,7 +67,8 @@ public class CheckoutService {
         OrderCodeGenerator orderCodeGenerator,
         TransactionTemplate transactionTemplate,
         Clock clock,
-        OrderSaga orderSaga
+        OrderSaga orderSaga,
+        MeterRegistry meterRegistry
     ) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -73,6 +78,7 @@ public class CheckoutService {
         this.transactionTemplate = transactionTemplate;
         this.clock = clock;
         this.orderSaga = orderSaga;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -84,6 +90,30 @@ public class CheckoutService {
      * @throws DependencyUnavailableException if catalog or inventory did not answer; retry with the same key.
      */
     public CheckoutResult checkout(String userLogin, String idempotencyKey, CheckoutRequest request) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "error";
+        try {
+            CheckoutResult result = placeOrder(userLogin, idempotencyKey, request);
+            outcome = result.replayed() ? "replayed" : "accepted";
+            return result;
+        } catch (SoldOutException e) {
+            outcome = "sold_out";
+            throw e;
+        } catch (CheckoutRejectedException e) {
+            outcome = "rejected";
+            throw e;
+        } catch (DependencyUnavailableException e) {
+            outcome = "dependency_unavailable";
+            throw e;
+        } catch (OrderStateException e) {
+            outcome = "conflict";
+            throw e;
+        } finally {
+            sample.stop(Timer.builder("ticketrush.checkout").description("Checkout requests by outcome").tag("outcome", outcome).register(meterRegistry));
+        }
+    }
+
+    private CheckoutResult placeOrder(String userLogin, String idempotencyKey, CheckoutRequest request) {
         LOG.debug("Request to checkout for {} with key {} : {}", userLogin, idempotencyKey, request);
         Optional<Order> existing = orderRepository.findOneWithItemsByIdempotencyKey(idempotencyKey);
         if (existing.isPresent()) {

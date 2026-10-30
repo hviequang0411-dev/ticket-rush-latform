@@ -3,6 +3,7 @@ package com.ticketrush.order.repository;
 import com.ticketrush.order.domain.OutboxEvent;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -21,6 +22,8 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
     List<OutboxEvent> lockUnpublished(@Param("limit") int limit);
 
     long countByPublishedAtIsNull();
+
+    Optional<OutboxEvent> findFirstByPublishedAtIsNullOrderByCreatedAtAsc();
 
     @Modifying
     @Query("delete from OutboxEvent e where e.publishedAt < :before")

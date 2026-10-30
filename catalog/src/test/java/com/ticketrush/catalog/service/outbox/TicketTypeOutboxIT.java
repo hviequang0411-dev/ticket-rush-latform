@@ -14,6 +14,8 @@ import com.ticketrush.catalog.service.TicketTypeService;
 import com.ticketrush.catalog.service.dto.EventDTO;
 import com.ticketrush.catalog.service.dto.TicketTypeDTO;
 import com.ticketrush.catalog.service.event.TicketTypeChanged;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -71,6 +73,9 @@ class TicketTypeOutboxIT {
     @Autowired
     private ObjectMapper om;
 
+    @Autowired
+    private Tracer tracer;
+
     private Event event;
 
     @BeforeEach
@@ -124,6 +129,20 @@ class TicketTypeOutboxIT {
 
         assertThat(outboxEventRepository.countByPublishedAtIsNull()).isZero();
         assertThat(outboxRelay.relayBatch()).as("published events are not sent again").isZero();
+    }
+
+    @Test
+    void eventsCarryTheTraceOfTheTransactionThatWroteThem() {
+        Span span = tracer.nextSpan().name("checkout").start();
+        try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+            ticketTypeService.save(ticketType(5));
+        } finally {
+            span.end();
+        }
+
+        assertThat(outboxEventRepository.findAll()).singleElement().satisfies(event ->
+            assertThat(event.getTraceParent()).startsWith("00-" + span.context().traceId() + "-")
+        );
     }
 
     @Test

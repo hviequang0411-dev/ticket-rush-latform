@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- W3C traceparent of the request that wrote the event, so the relay continues that trace across Kafka -->
+    <changeSet id="20261030130000-1" author="ticketrush">
+        <addColumn tableName="outbox_event">
+            <column name="trace_parent" type="varchar(64)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

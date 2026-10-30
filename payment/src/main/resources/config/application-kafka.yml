@@ -6,6 +6,8 @@ spring:
           replicationFactor: 1
           auto-create-topics: true
           brokers: localhost:9092
+          # Continue traces across Kafka: producers write traceparent headers, consumers read them
+          enableObservation: true
         default:
           producer:
             # The outbox relay marks an event published only after Kafka acknowledged it

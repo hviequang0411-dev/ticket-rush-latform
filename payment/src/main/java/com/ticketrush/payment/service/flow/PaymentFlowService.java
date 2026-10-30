@@ -10,6 +10,7 @@ import com.ticketrush.payment.repository.PaymentWebhookEventRepository;
 import com.ticketrush.payment.service.outbox.Outbox;
 import com.ticketrush.payment.service.provider.PaymentProviderGateway;
 import com.ticketrush.payment.service.provider.PaymentProviderGateway.WebhookNotification;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
@@ -60,6 +61,8 @@ public class PaymentFlowService {
 
     private final int expiryBatchSize;
 
+    private final MeterRegistry meterRegistry;
+
     private final SecureRandom random = new SecureRandom();
 
     public PaymentFlowService(
@@ -72,7 +75,8 @@ public class PaymentFlowService {
         Clock clock,
         List<PaymentProviderGateway> gateways,
         @Value("${ticketrush.payment.provider:MOCK}") PaymentProvider defaultProvider,
-        @Value("${ticketrush.payment.expiry-batch-size:100}") int expiryBatchSize
+        @Value("${ticketrush.payment.expiry-batch-size:100}") int expiryBatchSize,
+        MeterRegistry meterRegistry
     ) {
         this.paymentRepository = paymentRepository;
         this.webhookEventRepository = webhookEventRepository;
@@ -87,6 +91,7 @@ public class PaymentFlowService {
         }
         this.defaultProvider = defaultProvider;
         this.expiryBatchSize = expiryBatchSize;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -159,10 +164,12 @@ public class PaymentFlowService {
         PaymentWebhookEvent received = webhookInbox.record(provider, notification.eventKey(), payload, notification.signatureValid());
         if (!notification.signatureValid()) {
             LOG.warn("Rejected {} callback {} with an invalid signature", provider, notification.eventKey());
+            webhook(provider, "invalid_signature");
             throw new InvalidWebhookException("Invalid signature");
         }
         if (received.getProcessedAt() != null) {
             LOG.debug("Callback {} was already applied", notification.eventKey());
+            webhook(provider, "duplicate");
             return;
         }
         transactionTemplate.executeWithoutResult(status -> {
@@ -177,6 +184,7 @@ public class PaymentFlowService {
             );
             event.processedAt(clock.instant());
         });
+        webhook(provider, "applied");
     }
 
     /**
@@ -250,7 +258,12 @@ public class PaymentFlowService {
         publish(payment, lateSuccess);
     }
 
+    private void webhook(PaymentProvider provider, String outcome) {
+        meterRegistry.counter("ticketrush.payments.webhooks", "provider", provider.name(), "outcome", outcome).increment();
+    }
+
     private void publish(Payment payment, boolean late) {
+        meterRegistry.counter("ticketrush.payments.results", "status", payment.getStatus().name(), "late", String.valueOf(late)).increment();
         outbox.append(
             PaymentResultEvent.TOPIC,
             "Order",

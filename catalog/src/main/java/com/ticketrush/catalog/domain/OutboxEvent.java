@@ -49,10 +49,23 @@ public class OutboxEvent implements Serializable {
     @Column(name = "last_error", length = 500)
     private String lastError;
 
+    /** W3C traceparent of the transaction that wrote the event; the relay continues that trace. */
+    @Column(name = "trace_parent", length = 64)
+    private String traceParent;
+
     protected OutboxEvent() {}
 
-    public OutboxEvent(String aggregateType, String aggregateId, String eventType, String topic, String payload, Instant createdAt) {
+    public OutboxEvent(
+        String aggregateType,
+        String aggregateId,
+        String eventType,
+        String topic,
+        String payload,
+        Instant createdAt,
+        String traceParent
+    ) {
         this.id = UUID.randomUUID();
+        this.traceParent = traceParent;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.eventType = eventType;
@@ -109,5 +122,9 @@ public class OutboxEvent implements Serializable {
 
     public String getLastError() {
         return lastError;
+    }
+
+    public String getTraceParent() {
+        return traceParent;
     }
 }

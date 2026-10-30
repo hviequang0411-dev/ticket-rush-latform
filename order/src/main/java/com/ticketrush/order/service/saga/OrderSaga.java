@@ -13,6 +13,7 @@ import com.ticketrush.order.service.checkout.OrderNotFoundException;
 import com.ticketrush.order.service.checkout.OrderStateException;
 import com.ticketrush.order.service.checkout.OrderSummary;
 import com.ticketrush.order.service.outbox.Outbox;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.util.EnumSet;
 import java.util.Optional;
@@ -80,6 +81,8 @@ public class OrderSaga {
 
     private final Clock clock;
 
+    private final MeterRegistry meterRegistry;
+
     public OrderSaga(
         OrderRepository orderRepository,
         InventoryClient inventoryClient,
@@ -87,7 +90,8 @@ public class OrderSaga {
         ProcessedEvents processedEvents,
         Outbox outbox,
         TransactionTemplate transactionTemplate,
-        Clock clock
+        Clock clock,
+        MeterRegistry meterRegistry
     ) {
         this.orderRepository = orderRepository;
         this.inventoryClient = inventoryClient;
@@ -96,6 +100,7 @@ public class OrderSaga {
         this.outbox = outbox;
         this.transactionTemplate = transactionTemplate;
         this.clock = clock;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -302,6 +307,7 @@ public class OrderSaga {
                 order.failureReason(reason);
             }
             if (FINAL.contains(to)) {
+                meterRegistry.counter("ticketrush.orders", "status", to.name(), "reason", reason == null ? "none" : reason).increment();
                 outbox.append(
                     OrderEvent.TOPIC,
                     "Order",

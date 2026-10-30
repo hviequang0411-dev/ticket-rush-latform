@@ -286,6 +286,11 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-bootstrap</artifactId>
         </dependency>
+        <!-- Traces (and OTLP export) through Micrometer Tracing's OpenTelemetry bridge -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        </dependency>
         <!--
             Resilience4j for Spring Boot 4, instead of spring-cloud-starter-circuitbreaker-resilience4j, which pulls
             resilience4j-spring-boot3 onto a Boot 4 classpath (see ServiceClientsConfiguration)

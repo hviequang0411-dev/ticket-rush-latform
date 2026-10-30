@@ -85,6 +85,11 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Traces (and OTLP export) through Micrometer Tracing's OpenTelemetry bridge -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        </dependency>
         <dependency>
             <groupId>tech.jhipster</groupId>
             <artifactId>jhipster-framework</artifactId>

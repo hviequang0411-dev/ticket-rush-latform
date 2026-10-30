@@ -8,6 +8,7 @@ import com.ticketrush.inventory.domain.enumeration.HoldStatus;
 import com.ticketrush.inventory.repository.StockHoldRepository;
 import com.ticketrush.inventory.repository.TicketStockRepository;
 import com.ticketrush.inventory.service.outbox.Outbox;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,6 +45,8 @@ public class ReservationService {
 
     private final Clock clock;
 
+    private final MeterRegistry meterRegistry;
+
     private final Outbox outbox;
 
     public ReservationService(
@@ -51,13 +54,15 @@ public class ReservationService {
         StockHoldRepository stockHoldRepository,
         ApplicationProperties applicationProperties,
         Clock clock,
-        Outbox outbox
+        Outbox outbox,
+        MeterRegistry meterRegistry
     ) {
         this.ticketStockRepository = ticketStockRepository;
         this.stockHoldRepository = stockHoldRepository;
         this.applicationProperties = applicationProperties;
         this.clock = clock;
         this.outbox = outbox;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -76,6 +81,7 @@ public class ReservationService {
 
         List<StockHold> existing = stockHoldRepository.findAllByOrderId(request.orderId());
         if (!existing.isEmpty()) {
+            count("replayed");
             return replay(request.orderId(), requested, existing);
         }
 
@@ -83,6 +89,7 @@ public class ReservationService {
         if (stocks.size() != requested.size()) {
             Set<Long> missing = new HashSet<>(requested.keySet());
             stocks.forEach(stock -> missing.remove(stock.getTicketTypeId()));
+            count("unknown_ticket_type");
             throw new UnknownTicketTypeException(missing);
         }
         // Always lock rows in the same order, so two multi-item orders cannot deadlock each other
@@ -94,12 +101,15 @@ public class ReservationService {
         for (TicketStock stock : stocks) {
             int quantity = requested.get(stock.getTicketTypeId());
             if (ticketStockRepository.tryTake(stock.getId(), quantity) == 0) {
+                count("sold_out");
                 throw new InsufficientStockException(stock.getTicketTypeId(), quantity);
             }
             holds.add(
                 new StockHold().orderId(request.orderId()).quantity(quantity).status(HoldStatus.HELD).expiresAt(expiresAt).createdAt(now).stock(stock)
             );
         }
+        count("held");
+        meterRegistry.counter("ticketrush.seats.held").increment(holds.stream().mapToInt(StockHold::getQuantity).sum());
         return Reservation.of(request.orderId(), stockHoldRepository.saveAll(holds));
     }
 
@@ -174,6 +184,10 @@ public class ReservationService {
         }
         LOG.debug("Order {} already has holds, returning them", orderId);
         return Reservation.of(orderId, existing);
+    }
+
+    private void count(String outcome) {
+        meterRegistry.counter("ticketrush.reservations", "outcome", outcome).increment();
     }
 
     private List<StockHold> requireHolds(Long orderId) {

@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
@@ -141,6 +142,8 @@ public class SecurityConfiguration {
                     .pathMatchers("/services/*/v3/api-docs").hasAuthority(AuthoritiesConstants.ADMIN)
                     // Signed by the provider instead of authenticated (see payment's PaymentWebhookResource)
                     .pathMatchers(PAYMENT_PUBLIC_PATH).permitAll()
+                    // Browsing without an account: published events and seats left (read-only)
+                    .pathMatchers(HttpMethod.GET, "/services/catalog/api/public/**", "/services/inventory/api/public/**").permitAll()
                     .pathMatchers("/services/**").authenticated()
                     .pathMatchers("/v3/api-docs/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .pathMatchers("/management/health").permitAll()

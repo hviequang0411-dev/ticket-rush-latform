@@ -58,6 +58,18 @@ class InternalReservationResourceIT {
     }
 
     @Test
+    void anonymousVisitorsSeeSeatsLeftButNothingElse() throws Exception {
+        mockMvc
+            .perform(get("/api/public/availability").param("ticketTypeIds", stock.getTicketTypeId() + ",999999"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].ticketTypeId").value(stock.getTicketTypeId()))
+            .andExpect(jsonPath("$[0].availableQuantity").value(2))
+            .andExpect(jsonPath("$[0].totalQuantity").value(2));
+        mockMvc.perform(get("/api/stock-holds")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @WithMockUser(authorities = AuthoritiesConstants.SERVICE)
     void reserveConfirmAndSoldOut() throws Exception {
         mockMvc

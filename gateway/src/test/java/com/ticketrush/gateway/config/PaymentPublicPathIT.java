@@ -31,6 +31,16 @@ class PaymentPublicPathIT {
     }
 
     @Test
+    void anonymousVisitorsCanBrowseTheCatalogAndSeatsLeft() {
+        for (String path : new String[] { "/services/catalog/api/public/events", "/services/inventory/api/public/availability?ticketTypeIds=1" }) {
+            HttpStatus status = HttpStatus.valueOf(webTestClient.get().uri(path).exchange().returnResult(Void.class).getStatus().value());
+            assertThat(status).as(path).isNotIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN, HttpStatus.FOUND);
+        }
+        // Only reads: the same paths do not accept anonymous writes
+        webTestClient.post().uri("/services/catalog/api/public/events").exchange().expectStatus().value(status -> assertThat(status).isIn(302, 401, 403));
+    }
+
+    @Test
     void everythingElseStillNeedsCsrf() {
         webTestClient
             .mutateWith(mockUser("alice"))

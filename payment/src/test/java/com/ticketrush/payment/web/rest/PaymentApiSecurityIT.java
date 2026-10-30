@@ -61,6 +61,16 @@ class PaymentApiSecurityIT {
     }
 
     @Test
+    void browsersAreSentBackToTheShopAfterPaying() throws Exception {
+        String ref = createAsService();
+
+        mockMvc
+            .perform(post("/api/public/mock-provider/{ref}/complete", ref).param("result", "success").header("Accept", "text/html,application/xhtml+xml"))
+            .andExpect(status().isSeeOther())
+            .andExpect(header().string("Location", "/order-result?orderCode=TR42"));
+    }
+
+    @Test
     void forgedWebhookIsRejected() throws Exception {
         String ref = createAsService();
 

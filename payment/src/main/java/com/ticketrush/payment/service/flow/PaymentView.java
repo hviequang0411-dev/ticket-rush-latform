@@ -7,6 +7,7 @@ import java.time.Instant;
 
 public record PaymentView(
     Long orderId,
+    String orderCode,
     String providerRef,
     PaymentStatus status,
     String paymentUrl,
@@ -18,6 +19,7 @@ public record PaymentView(
     static PaymentView of(Payment payment) {
         return new PaymentView(
             payment.getOrderId(),
+            payment.getOrderCode(),
             payment.getProviderRef(),
             payment.getStatus(),
             payment.getPaymentUrl(),

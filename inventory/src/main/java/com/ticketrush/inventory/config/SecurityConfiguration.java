@@ -46,6 +46,8 @@ public class SecurityConfiguration {
                     .requestMatchers("/api/auth-info").permitAll()
                     .requestMatchers("/api/admin/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers("/api/internal/**").hasAuthority(AuthoritiesConstants.SERVICE)
+                    // Seats left, for anonymous visitors (read-only)
+                    .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                     // Stock is read by anyone signed in but only changed by admins or by reservations
                     .requestMatchers(HttpMethod.GET, "/api/ticket-stocks/**", "/api/stock-holds/**").authenticated()
                     .requestMatchers("/api/ticket-stocks/**", "/api/stock-holds/**").hasAuthority(AuthoritiesConstants.ADMIN)

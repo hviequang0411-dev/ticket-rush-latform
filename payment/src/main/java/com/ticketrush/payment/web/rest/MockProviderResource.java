@@ -4,7 +4,14 @@ import com.ticketrush.payment.domain.enumeration.PaymentProvider;
 import com.ticketrush.payment.service.flow.PaymentFlowService;
 import com.ticketrush.payment.service.flow.PaymentView;
 import com.ticketrush.payment.service.provider.MockPaymentProvider;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.HtmlUtils;
@@ -24,9 +31,16 @@ public class MockProviderResource {
 
     private final MockPaymentProvider mockPaymentProvider;
 
-    public MockProviderResource(PaymentFlowService paymentFlowService, MockPaymentProvider mockPaymentProvider) {
+    private final String returnUrl;
+
+    public MockProviderResource(
+        PaymentFlowService paymentFlowService,
+        MockPaymentProvider mockPaymentProvider,
+        @Value("${ticketrush.payment.mock.return-url:/order-result?orderCode={orderCode}}") String returnUrl
+    ) {
         this.paymentFlowService = paymentFlowService;
         this.mockPaymentProvider = mockPaymentProvider;
+        this.returnUrl = returnUrl;
     }
 
     @GetMapping(value = "/{providerRef}", produces = MediaType.TEXT_HTML_VALUE)
@@ -45,13 +59,22 @@ public class MockProviderResource {
     }
 
     /**
-     * Sends the signed callback for the chosen outcome through the regular webhook path.
+     * Sends the signed callback for the chosen outcome through the regular webhook path. A browser (the page's form)
+     * is then sent back to the shop like a real provider would do; API clients get the payment as JSON.
      */
     @PostMapping("/{providerRef}/complete")
-    public PaymentView complete(@PathVariable String providerRef, @RequestParam(defaultValue = MockPaymentProvider.SUCCESS) String result) {
+    public ResponseEntity<PaymentView> complete(
+        @PathVariable String providerRef,
+        @RequestParam(defaultValue = MockPaymentProvider.SUCCESS) String result,
+        @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept
+    ) {
         PaymentView payment = find(providerRef);
         paymentFlowService.handleWebhook(PaymentProvider.MOCK, mockPaymentProvider.callbackFor(payment.providerRef(), payment.amount(), result), null);
-        return find(providerRef);
+        if (accept != null && accept.contains(MediaType.TEXT_HTML_VALUE)) {
+            String location = returnUrl.replace("{orderCode}", URLEncoder.encode(payment.orderCode(), StandardCharsets.UTF_8));
+            return ResponseEntity.status(HttpStatus.SEE_OTHER).location(URI.create(location)).build();
+        }
+        return ResponseEntity.ok(find(providerRef));
     }
 
     private PaymentView find(String providerRef) {

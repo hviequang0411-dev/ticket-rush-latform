@@ -1,6 +1,7 @@
 package com.ticketrush.catalog.repository;
 
 import com.ticketrush.catalog.domain.TicketType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -37,4 +38,7 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
 
     @Query("select ticketType from TicketType ticketType left join fetch ticketType.event where ticketType.id =:id")
     Optional<TicketType> findOneWithToOneRelationships(@Param("id") Long id);
+
+    @Query("select ticketType from TicketType ticketType where ticketType.event.id in :eventIds order by ticketType.price desc")
+    List<TicketType> findAllByEventIds(@Param("eventIds") Collection<Long> eventIds);
 }

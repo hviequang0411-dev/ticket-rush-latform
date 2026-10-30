@@ -1,0 +1,172 @@
+// Design Tokens SCSS & Bootstrap Overrides
+:root {
+  /* Colors - Light Theme */
+  --bg-app: #faf9f6; /* Nền trắng ngà ấm */
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f4f2ec;
+  --bg-surface-hover: #ece9df;
+  
+  --text-main: #0f172a; /* Xanh mực đậm */
+  --text-muted: #475569;
+  --text-subtle: #64748b;
+  
+  --border-subtle: #e2dfd5;
+  --border-strong: #cbd5e1;
+
+  /* Primary CTA: Đỏ san hô / Cam Vermilion */
+  --color-primary: #ea580c; 
+  --color-primary-hover: #c2410c;
+  --color-primary-active: #9a3412;
+  --color-primary-subtle: #fff7ed;
+  --color-primary-border: #fdba74;
+
+  /* Semantic status colors - WCAG AA compliant */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-info: #0369a1;
+  --color-info-bg: #f0f9ff;
+  --color-info-border: #bae6fd;
+
+  /* Shadows - Tối đa 2 cấp */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-floating: 0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 8px -2px rgba(15, 23, 42, 0.06);
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px; /* Card */
+  --radius-lg: 12px; /* Large container */
+  --radius-pill: 9999px; /* Badge */
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px rgba(234, 88, 12, 0.25);
+  --focus-ring-danger: 0 0 0 3px rgba(185, 28, 28, 0.25);
+
+  --font-family-base: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg-app: #090d16;
+  --bg-surface: #111827;
+  --bg-surface-subtle: #1f2937;
+  --bg-surface-hover: #374151;
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+
+  --border-subtle: #1e293b;
+  --border-strong: #334155;
+
+  --color-primary: #f97316;
+  --color-primary-hover: #ea580c;
+  --color-primary-active: #c2410c;
+  --color-primary-subtle: #2a1b14;
+  --color-primary-border: #7c2d12;
+
+  --color-success: #22c55e;
+  --color-success-bg: #052e16;
+  --color-success-border: #14532d;
+
+  --color-warning: #f59e0b;
+  --color-warning-bg: #2d1e05;
+  --color-warning-border: #78350f;
+
+  --color-danger: #ef4444;
+  --color-danger-bg: #311313;
+  --color-danger-border: #7f1d1d;
+
+  --color-info: #38bdf8;
+  --color-info-bg: #082f49;
+  --color-info-border: #075985;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-floating: 0 12px 28px rgba(0, 0, 0, 0.6);
+}
+
+/* Base resets & typography */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-base);
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.3;
+  margin-bottom: 0.5rem;
+}
+
+h1 { font-size: 36px; }
+h2 { font-size: 28px; }
+h3 { font-size: 22px; }
+h4 { font-size: 18px; }
+
+@media (min-width: 1024px) {
+  h1 { font-size: 48px; }
+  h2 { font-size: 36px; }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+/* Accessible focus rings */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring) !important;
+}
+
+/* Global button reset to follow touch target 44px */
+.btn-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

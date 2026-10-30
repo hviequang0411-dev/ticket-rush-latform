@@ -2,8 +2,9 @@
 #   docker compose -f docker-compose/docker-compose.yml -f observability/compose.yml -f deploy/compose.prod.yml up -d
 # deploy/deploy.sh does this on the VM. Relative paths resolve against docker-compose/.
 #
-# Caddy terminates HTTPS (Let's Encrypt) for three hosts:
-#   ${DOMAIN}          gateway (UI + APIs)
+# Caddy terminates HTTPS (Let's Encrypt) for four hosts:
+#   ${DOMAIN}          buyer SPA (ui) + gateway APIs and sign-in on the same origin
+#   admin.${DOMAIN}    gateway's JHipster admin UI
 #   auth.${DOMAIN}     Keycloak, so browsers can log in and tokens carry a public issuer
 #   grafana.${DOMAIN}  Grafana (its own login)
 # Nothing else is published: Consul, Kafka, databases, Prometheus and Tempo stay on the internal network.
@@ -22,9 +23,14 @@ services:
       - ../deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
     depends_on:
+      - ui
       - gateway
       - keycloak
       - grafana
+
+  ui:
+    image: ticketrush-ui:latest
+    restart: unless-stopped
 
   gateway:
     restart: unless-stopped

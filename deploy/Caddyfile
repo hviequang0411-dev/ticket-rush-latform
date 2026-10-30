@@ -2,7 +2,20 @@
 	email {$ACME_EMAIL}
 }
 
+# The buyer SPA and the gateway share one origin, so the gateway's session and XSRF cookies just work
 {$DOMAIN} {
+	encode zstd gzip
+	@gateway path /api/* /services/* /oauth2/* /login/*
+	handle @gateway {
+		reverse_proxy gateway:8080
+	}
+	handle {
+		reverse_proxy ui:80
+	}
+}
+
+# JHipster's generated admin UI (entities, metrics, logs), behind the same Keycloak login
+admin.{$DOMAIN} {
 	encode zstd gzip
 	reverse_proxy gateway:8080
 }

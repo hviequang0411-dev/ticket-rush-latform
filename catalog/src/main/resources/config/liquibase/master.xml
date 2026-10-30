@@ -20,4 +20,5 @@
     <include file="config/liquibase/changelog/20231222135134_added_entity_constraints_TicketType.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
+    <include file="config/liquibase/changelog/20261030090000_outbox.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

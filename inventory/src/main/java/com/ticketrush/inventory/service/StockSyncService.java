@@ -2,7 +2,10 @@ package com.ticketrush.inventory.service;
 
 import com.ticketrush.inventory.broker.TicketTypeEvent;
 import com.ticketrush.inventory.domain.TicketStock;
+import com.ticketrush.inventory.repository.ProcessedEvents;
 import com.ticketrush.inventory.repository.TicketStockRepository;
+import java.time.Clock;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,13 +24,29 @@ public class StockSyncService {
 
     private static final Logger LOG = LoggerFactory.getLogger(StockSyncService.class);
 
+    private static final String CONSUMER = "stock-sync";
+
     private final TicketStockRepository ticketStockRepository;
 
-    public StockSyncService(TicketStockRepository ticketStockRepository) {
+    private final ProcessedEvents processedEvents;
+
+    private final Clock clock;
+
+    public StockSyncService(TicketStockRepository ticketStockRepository, ProcessedEvents processedEvents, Clock clock) {
         this.ticketStockRepository = ticketStockRepository;
+        this.processedEvents = processedEvents;
+        this.clock = clock;
     }
 
-    public void apply(TicketTypeEvent event) {
+    /**
+     * @param eventId the publisher's event id; a redelivered id is ignored. Absolute totals keep a plain duplicate
+     *     harmless anyway, but a stale redelivery after a newer event would otherwise roll the total back.
+     */
+    public void apply(TicketTypeEvent event, UUID eventId) {
+        if (eventId != null && !processedEvents.firstDelivery(CONSUMER, eventId, clock.instant())) {
+            LOG.debug("Skipping already processed ticket type event {}", eventId);
+            return;
+        }
         ticketStockRepository
             .findByTicketTypeId(event.ticketTypeId())
             .ifPresentOrElse(

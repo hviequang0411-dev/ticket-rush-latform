@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Transactional outbox: events are written with the business change and relayed to Kafka afterwards (ADR 0004) -->
+    <changeSet id="20261030090000-1" author="ticketrush">
+        <createTable tableName="outbox_event">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="aggregate_type" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="aggregate_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_type" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="topic" type="varchar(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payload" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published_at" type="${datetimeType}"/>
+            <column name="attempts" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_error" type="varchar(500)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- The relay only ever reads unpublished rows, oldest first -->
+    <changeSet id="20261030090000-2" author="ticketrush">
+        <sql>CREATE INDEX ix_outbox_event__unpublished ON outbox_event (created_at) WHERE published_at IS NULL</sql>
+    </changeSet>
+    <!-- Consumer side of at-least-once delivery: an event id seen before is skipped -->
+    <changeSet id="20261030090000-3" author="ticketrush">
+        <createTable tableName="processed_event">
+            <column name="consumer" type="varchar(64)">
+                <constraints primaryKey="true" primaryKeyName="pk_processed_event" nullable="false"/>
+            </column>
+            <column name="event_id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_processed_event" nullable="false"/>
+            </column>
+            <column name="processed_at" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

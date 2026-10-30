@@ -7,6 +7,7 @@ import com.ticketrush.inventory.IntegrationTest;
 import com.ticketrush.inventory.domain.StockHold;
 import com.ticketrush.inventory.domain.TicketStock;
 import com.ticketrush.inventory.domain.enumeration.HoldStatus;
+import com.ticketrush.inventory.repository.OutboxEventRepository;
 import com.ticketrush.inventory.repository.StockHoldRepository;
 import com.ticketrush.inventory.repository.TicketStockRepository;
 import java.time.Clock;
@@ -62,8 +63,12 @@ class ReservationServiceIT {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
+
     @AfterEach
     void cleanup() {
+        outboxEventRepository.deleteAll();
         stockHoldRepository.deleteAll();
         ticketStockRepository.deleteAll();
     }
@@ -160,6 +165,13 @@ class ReservationServiceIT {
         });
         assertThat(reservationService.expireDueHolds()).isEmpty();
 
+        assertThat(outboxEventRepository.findAll())
+            .filteredOn(event -> event.getAggregateId().equals(String.valueOf(orderId)))
+            .singleElement()
+            .satisfies(event -> {
+                assertThat(event.getTopic()).isEqualTo("inventory.hold-expired.v1");
+                assertThat(event.getEventType()).isEqualTo("HOLD_EXPIRED");
+            });
         assertThat(available(stock)).isEqualTo(10);
         assertThat(holdsOf(orderId)).allMatch(hold -> hold.getStatus() == HoldStatus.EXPIRED);
         assertThatThrownBy(() -> reservationService.confirm(orderId)).isInstanceOf(ReservationConflictException.class);

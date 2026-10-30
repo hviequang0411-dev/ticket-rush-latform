@@ -10,6 +10,7 @@ import com.ticketrush.inventory.service.reservation.ReservationRequest;
 import com.ticketrush.inventory.service.reservation.ReservationService;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,8 +73,30 @@ class TicketTypeEventsConsumerIT {
         });
     }
 
+    @Test
+    void staleRedeliveryIsIgnored() {
+        send(TicketTypeEvent.Type.CREATED, 100);
+        UUID resizeTo120 = UUID.randomUUID();
+        send(TicketTypeEvent.Type.UPDATED, 120, resizeTo120);
+        send(TicketTypeEvent.Type.UPDATED, 80);
+
+        // The outbox delivers at least once: the 120 event shows up again after the newer 80 one
+        send(TicketTypeEvent.Type.UPDATED, 120, resizeTo120);
+
+        assertThat(stock().getTotalQuantity()).isEqualTo(80);
+    }
+
     private void send(TicketTypeEvent.Type type, int total) {
-        input.send(MessageBuilder.withPayload(new TicketTypeEvent(type, TICKET_TYPE_ID, 1L, total, Instant.now())).build(), TOPIC);
+        send(type, total, UUID.randomUUID());
+    }
+
+    private void send(TicketTypeEvent.Type type, int total, UUID eventId) {
+        input.send(
+            MessageBuilder.withPayload(new TicketTypeEvent(type, TICKET_TYPE_ID, 1L, total, Instant.now()))
+                .setHeader(TicketTypeEventsConsumer.EVENT_ID, eventId.toString())
+                .build(),
+            TOPIC
+        );
     }
 
     private TicketStock stock() {

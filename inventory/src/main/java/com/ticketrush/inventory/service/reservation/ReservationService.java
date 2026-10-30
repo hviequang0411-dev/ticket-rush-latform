@@ -1,11 +1,13 @@
 package com.ticketrush.inventory.service.reservation;
 
+import com.ticketrush.inventory.broker.HoldExpiredEvent;
 import com.ticketrush.inventory.config.ApplicationProperties;
 import com.ticketrush.inventory.domain.StockHold;
 import com.ticketrush.inventory.domain.TicketStock;
 import com.ticketrush.inventory.domain.enumeration.HoldStatus;
 import com.ticketrush.inventory.repository.StockHoldRepository;
 import com.ticketrush.inventory.repository.TicketStockRepository;
+import com.ticketrush.inventory.service.outbox.Outbox;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,16 +44,20 @@ public class ReservationService {
 
     private final Clock clock;
 
+    private final Outbox outbox;
+
     public ReservationService(
         TicketStockRepository ticketStockRepository,
         StockHoldRepository stockHoldRepository,
         ApplicationProperties applicationProperties,
-        Clock clock
+        Clock clock,
+        Outbox outbox
     ) {
         this.ticketStockRepository = ticketStockRepository;
         this.stockHoldRepository = stockHoldRepository;
         this.applicationProperties = applicationProperties;
         this.clock = clock;
+        this.outbox = outbox;
     }
 
     /**
@@ -147,6 +153,12 @@ public class ReservationService {
             hold.setStatus(HoldStatus.EXPIRED);
             expired.add(new ExpiredHold(hold.getOrderId(), hold.getStock().getTicketTypeId(), hold.getQuantity(), now));
         }
+        // One event per order, written in the transaction that put the seats back on sale
+        expired
+            .stream()
+            .map(ExpiredHold::orderId)
+            .distinct()
+            .forEach(orderId -> outbox.append(HoldExpiredEvent.TOPIC, "Order", orderId, "HOLD_EXPIRED", new HoldExpiredEvent(orderId, now)));
         if (!expired.isEmpty()) {
             LOG.info("Expired {} holds", expired.size());
         }

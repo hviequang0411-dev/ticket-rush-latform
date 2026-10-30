@@ -118,9 +118,6 @@ spring:
           destination: catalog.ticket-type.v1
           content-type: application/json
           group: inventory
-        holdExpired-out-0:
-          destination: inventory.hold-expired.v1
-          content-type: application/json
   docker:
     compose:
       enabled: true

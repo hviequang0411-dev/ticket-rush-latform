@@ -33,9 +33,6 @@ spring:
           destination: catalog.ticket-type.v1
           content-type: application/json
           group: inventory
-        holdExpired-out-0:
-          destination: inventory.hold-expired.v1
-          content-type: application/json
   # Replace by 'prod, faker' to add the faker context and have sample data loaded in production
   liquibase:
     contexts: test
@@ -113,3 +110,8 @@ application:
   reservation:
     # Tests drive expiry themselves through ReservationService
     expiry-job-enabled: false
+
+ticketrush:
+  outbox:
+    # Tests relay explicitly through OutboxRelay.relayBatch() instead of the scheduler
+    relay-enabled: false

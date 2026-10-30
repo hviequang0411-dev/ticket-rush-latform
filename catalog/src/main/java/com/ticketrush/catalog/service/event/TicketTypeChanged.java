@@ -3,10 +3,12 @@ package com.ticketrush.catalog.service.event;
 import java.time.Instant;
 
 /**
- * Raised inside the transaction that created or updated a ticket type. Forwarded to Kafka only after commit
- * (see {@link com.ticketrush.catalog.broker.TicketTypeEventsPublisher}).
+ * Published on {@value #TOPIC} through the outbox whenever a ticket type is created or updated, keyed by ticket
+ * type id. {@code totalQuantity} is the new absolute value.
  */
 public record TicketTypeChanged(Type type, Long ticketTypeId, Long eventId, Integer totalQuantity, Instant occurredAt) {
+    public static final String TOPIC = "catalog.ticket-type.v1";
+
     public enum Type {
         CREATED,
         UPDATED,

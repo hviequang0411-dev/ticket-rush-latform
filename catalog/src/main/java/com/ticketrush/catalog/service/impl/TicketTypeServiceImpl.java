@@ -6,6 +6,7 @@ import com.ticketrush.catalog.service.TicketTypeService;
 import com.ticketrush.catalog.service.dto.TicketTypeDTO;
 import com.ticketrush.catalog.service.event.TicketTypeChanged;
 import com.ticketrush.catalog.service.mapper.TicketTypeMapper;
+import com.ticketrush.catalog.service.outbox.Outbox;
 import java.time.Clock;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,7 +14,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,19 +30,19 @@ public class TicketTypeServiceImpl implements TicketTypeService {
 
     private final TicketTypeMapper ticketTypeMapper;
 
-    private final ApplicationEventPublisher eventPublisher;
+    private final Outbox outbox;
 
     private final Clock clock;
 
     public TicketTypeServiceImpl(
         TicketTypeRepository ticketTypeRepository,
         TicketTypeMapper ticketTypeMapper,
-        ApplicationEventPublisher eventPublisher,
+        Outbox outbox,
         Clock clock
     ) {
         this.ticketTypeRepository = ticketTypeRepository;
         this.ticketTypeMapper = ticketTypeMapper;
-        this.eventPublisher = eventPublisher;
+        this.outbox = outbox;
         this.clock = clock;
     }
 
@@ -113,6 +113,12 @@ public class TicketTypeServiceImpl implements TicketTypeService {
 
     private void raise(TicketTypeChanged.Type type, TicketType ticketType) {
         Long eventId = ticketType.getEvent() != null ? ticketType.getEvent().getId() : null;
-        eventPublisher.publishEvent(new TicketTypeChanged(type, ticketType.getId(), eventId, ticketType.getTotalQuantity(), clock.instant()));
+        outbox.append(
+            TicketTypeChanged.TOPIC,
+            "TicketType",
+            ticketType.getId(),
+            type.name(),
+            new TicketTypeChanged(type, ticketType.getId(), eventId, ticketType.getTotalQuantity(), clock.instant())
+        );
     }
 }

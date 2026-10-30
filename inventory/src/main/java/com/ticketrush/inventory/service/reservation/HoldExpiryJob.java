@@ -1,6 +1,5 @@
 package com.ticketrush.inventory.service.reservation;
 
-import com.ticketrush.inventory.broker.HoldEventsPublisher;
 import com.ticketrush.inventory.config.ApplicationProperties;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,17 +16,10 @@ public class HoldExpiryJob {
 
     private final ReservationService reservationService;
 
-    private final HoldEventsPublisher holdEventsPublisher;
-
     private final int batchSize;
 
-    public HoldExpiryJob(
-        ReservationService reservationService,
-        HoldEventsPublisher holdEventsPublisher,
-        ApplicationProperties applicationProperties
-    ) {
+    public HoldExpiryJob(ReservationService reservationService, ApplicationProperties applicationProperties) {
         this.reservationService = reservationService;
-        this.holdEventsPublisher = holdEventsPublisher;
         this.batchSize = applicationProperties.getReservation().getExpiryBatchSize();
     }
 
@@ -35,9 +27,8 @@ public class HoldExpiryJob {
     public void expireDueHolds() {
         List<ExpiredHold> batch;
         do {
-            // Each call is its own transaction, so events are only sent for holds that are committed as expired
+            // Each batch is its own transaction; the expiry events go through the outbox in that transaction
             batch = reservationService.expireDueHolds();
-            holdEventsPublisher.publishExpired(batch);
         } while (batch.size() == batchSize);
     }
 }

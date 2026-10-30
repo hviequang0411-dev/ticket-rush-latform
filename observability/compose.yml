@@ -1,0 +1,66 @@
+# Metrics, traces and dashboards, layered on top of the generated stack:
+#   docker compose -f docker-compose/docker-compose.yml -f observability/compose.yml up -d --wait
+#
+# Relative paths resolve against docker-compose/ (the first file's directory), hence the ../observability prefix.
+services:
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      # Exemplars link a latency sample to the trace that produced it
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - 127.0.0.1:9090:9090
+
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - 127.0.0.1:16686:16686
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/ticketrush.json
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - 127.0.0.1:3000:3000
+    depends_on:
+      - prometheus
+      - jaeger
+
+  # Services export traces over OTLP to Jaeger
+  gateway:
+    environment:
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
+  catalog:
+    environment:
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
+  inventory:
+    environment:
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
+  order:
+    environment:
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
+  payment:
+    environment:
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}

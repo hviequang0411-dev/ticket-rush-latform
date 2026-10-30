@@ -1,0 +1,8 @@
+# Load-test settings layered over the stack; add this file when starting it (see load/run.sh):
+# every k6 request uses one service account, so the per-user checkout limit is lifted. Set
+# TRACING_SAMPLING_PROBABILITY=0.05 when starting the stack so tracing does not distort the numbers.
+services:
+  gateway:
+    environment:
+      - TICKETRUSH_RATE_LIMIT_CHECKOUT_REPLENISH_RATE=100000
+      - TICKETRUSH_RATE_LIMIT_CHECKOUT_BURST_CAPACITY=100000

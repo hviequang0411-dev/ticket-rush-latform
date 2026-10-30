@@ -61,6 +61,10 @@ public class Event implements Serializable {
     @Column(name = "poster_url", length = 1000)
     private String posterUrl;
 
+    /** Buyers must queue in the waiting room and hold an admission pass to check out. */
+    @Column(name = "waiting_room", nullable = false)
+    private Boolean waitingRoom = false;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "event")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @JsonIgnoreProperties(value = { "event" }, allowSetters = true)
@@ -161,6 +165,19 @@ public class Event implements Serializable {
 
     public void setStatus(EventStatus status) {
         this.status = status;
+    }
+
+    public Boolean getWaitingRoom() {
+        return this.waitingRoom;
+    }
+
+    public Event waitingRoom(Boolean waitingRoom) {
+        this.setWaitingRoom(waitingRoom);
+        return this;
+    }
+
+    public void setWaitingRoom(Boolean waitingRoom) {
+        this.waitingRoom = waitingRoom != null && waitingRoom;
     }
 
     public String getPosterUrl() {

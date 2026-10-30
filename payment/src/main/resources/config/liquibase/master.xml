@@ -21,4 +21,5 @@
     <include file="config/liquibase/changelog/20261030090000_outbox.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20261030100000_payment_flow.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20261030130000_outbox_trace.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20261031100000_webhook_deliveries.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

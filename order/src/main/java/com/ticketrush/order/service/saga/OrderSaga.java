@@ -13,6 +13,7 @@ import com.ticketrush.order.service.checkout.OrderNotFoundException;
 import com.ticketrush.order.service.checkout.OrderStateException;
 import com.ticketrush.order.service.checkout.OrderSummary;
 import com.ticketrush.order.service.outbox.Outbox;
+import com.ticketrush.order.service.ticket.TicketService;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.util.EnumSet;
@@ -32,7 +33,7 @@ import org.springframework.web.client.RestClientException;
  * (see docs/adr/0002-saga-orchestration.md).
  *
  * <pre>
- * RESERVED --payment opened--> AWAITING_PAYMENT --paid, seats confirmed--> CONFIRMED
+ * RESERVED --payment opened--> AWAITING_PAYMENT --paid, seats confirmed--> CONFIRMED (tickets issued)
  *                                  |  payment failed / expired: release seats --> FAILED / EXPIRED
  *                                  |  seats expired: cancel payment ------------> EXPIRED
  *                                  |  paid but seats gone: refund --------------> REFUNDED
@@ -77,6 +78,8 @@ public class OrderSaga {
 
     private final Outbox outbox;
 
+    private final TicketService ticketService;
+
     private final TransactionTemplate transactionTemplate;
 
     private final Clock clock;
@@ -89,6 +92,7 @@ public class OrderSaga {
         PaymentClient paymentClient,
         ProcessedEvents processedEvents,
         Outbox outbox,
+        TicketService ticketService,
         TransactionTemplate transactionTemplate,
         Clock clock,
         MeterRegistry meterRegistry
@@ -98,6 +102,7 @@ public class OrderSaga {
         this.paymentClient = paymentClient;
         this.processedEvents = processedEvents;
         this.outbox = outbox;
+        this.ticketService = ticketService;
         this.transactionTemplate = transactionTemplate;
         this.clock = clock;
         this.meterRegistry = meterRegistry;
@@ -305,6 +310,10 @@ public class OrderSaga {
             order.status(to).updatedAt(clock.instant());
             if (reason != null) {
                 order.failureReason(reason);
+            }
+            if (to == OrderStatus.CONFIRMED) {
+                // Same transaction as the confirmation: no CONFIRMED order without its tickets
+                ticketService.issue(order);
             }
             if (FINAL.contains(to)) {
                 meterRegistry.counter("ticketrush.orders", "status", to.name(), "reason", reason == null ? "none" : reason).increment();

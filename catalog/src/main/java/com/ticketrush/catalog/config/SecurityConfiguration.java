@@ -47,6 +47,10 @@ public class SecurityConfiguration {
                     .requestMatchers("/api/admin/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     // The catalog as anonymous visitors see it (read-only, published events only)
                     .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                    // Order prices checkouts from here with its service token
+                    .requestMatchers(HttpMethod.GET, "/api/ticket-types/*").hasAnyAuthority(AuthoritiesConstants.ADMIN, AuthoritiesConstants.SERVICE)
+                    // Managing the catalog is the organiser's job: sign-up is open, so buyers must not reach these
+                    .requestMatchers("/api/events/**", "/api/venues/**", "/api/ticket-types/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers("/api/**").authenticated()
                     .requestMatchers("/v3/api-docs/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers("/management/health").permitAll()

@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ticketrush.catalog.IntegrationTest;
 import com.ticketrush.catalog.domain.Event;
 import com.ticketrush.catalog.domain.TicketType;
+import com.ticketrush.catalog.security.AuthoritiesConstants;
 import com.ticketrush.catalog.repository.TicketTypeRepository;
 import com.ticketrush.catalog.service.TicketTypeService;
 import com.ticketrush.catalog.service.dto.TicketTypeDTO;
@@ -44,7 +45,7 @@ import tools.jackson.databind.ObjectMapper;
 @IntegrationTest
 @ExtendWith(MockitoExtension.class)
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = AuthoritiesConstants.ADMIN)
 class TicketTypeResourceIT {
 
     private static final String DEFAULT_NAME = "AAAAAAAAAA";

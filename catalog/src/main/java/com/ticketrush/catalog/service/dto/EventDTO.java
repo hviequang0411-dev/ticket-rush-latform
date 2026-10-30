@@ -38,6 +38,8 @@ public class EventDTO implements Serializable {
     @Size(max = 1000)
     private String posterUrl;
 
+    private Boolean waitingRoom;
+
     @NotNull
     private VenueDTO venue;
 
@@ -95,6 +97,14 @@ public class EventDTO implements Serializable {
 
     public void setStatus(EventStatus status) {
         this.status = status;
+    }
+
+    public Boolean getWaitingRoom() {
+        return waitingRoom;
+    }
+
+    public void setWaitingRoom(Boolean waitingRoom) {
+        this.waitingRoom = waitingRoom;
     }
 
     public String getPosterUrl() {

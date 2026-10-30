@@ -4,16 +4,21 @@
     docker compose -f docker-compose/docker-compose.yml -f scripts/e2e/compose.override.yml up -d --wait
     python scripts/e2e/e2e.py
 
-Covers: catalog -> Kafka -> inventory stock sync, checkout through gateway -> order -> catalog/inventory,
-idempotent replay, cancel, a concurrent sell-out over HTTP, hold expiry -> Kafka -> order EXPIRED, the payment
-saga (paid -> CONFIRMED, declined -> FAILED, paid after expiry -> REFUNDED, forged webhook rejected), and the
-gateway's per-user rate limit on checkout.
-The token is a client-credentials token of the `internal` client, fetched inside the compose network so that
-its issuer is http://keycloak:9080 like the services expect.
+Covers: organiser APIs (event + ticket types in one call, drafts hidden and unsellable), catalog -> Kafka ->
+inventory stock sync, checkout through gateway -> order -> catalog/inventory, idempotent replay, cancel, a
+concurrent sell-out over HTTP, hold expiry -> Kafka -> order EXPIRED, the payment saga (paid -> CONFIRMED with
+e-tickets, declined -> FAILED, paid after expiry -> REFUNDED, forged webhook rejected), gate check-in (admit once),
+the waiting room (no pass -> 428, queue -> pass -> checkout) and the gateway's per-user rate limit on checkout.
+
+Buyer calls use a client-credentials token of the `internal` client. Organiser calls need a real admin: the script
+keeps an `e2e-admin` user in /Admins, gives it a fresh random password, and turns on the password grant of the
+`web_app` client only while it signs in. Tokens are fetched inside the compose network so that their issuer is
+http://keycloak:9080 like the services expect. Local dev stack only.
 """
 import base64
 import json
 import os
+import secrets
 import subprocess
 import sys
 import time
@@ -61,6 +66,46 @@ def fetch_token():
     return json.loads(out)["access_token"]
 
 
+def curl(*args):
+    """curl inside the compose network; returns (status, body)."""
+    out = subprocess.run(
+        ["docker", "run", "--rm", "--network", NETWORK, CURL_IMAGE, "-s", "-w", "\n%{http_code}", *args],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    body, _, status = out.rpartition("\n")
+    return int(status), body
+
+
+def fetch_admin_token():
+    kc = "http://keycloak:9080"
+    _, master = curl(
+        "-X", "POST", f"{kc}/realms/master/protocol/openid-connect/token", "-d", "grant_type=password", "-d", "client_id=admin-cli",
+        "-d", "username=" + env("KEYCLOAK_ADMIN_USER"), "-d", "password=" + env("KEYCLOAK_ADMIN_PASSWORD"),
+    )
+    auth = ["-H", "Authorization: Bearer " + json.loads(master)["access_token"], "-H", "Content-Type: application/json"]
+    admin_api = f"{kc}/admin/realms/jhipster"
+
+    _, users = curl(*auth, f"{admin_api}/users?username=e2e-admin&exact=true")
+    if not json.loads(users):
+        curl(*auth, "-X", "POST", f"{admin_api}/users", "-d", json.dumps({"username": "e2e-admin", "enabled": True, "email": "e2e-admin@localhost", "emailVerified": True, "firstName": "E2E", "lastName": "Admin", "groups": ["/Admins", "/Users"]}))
+        _, users = curl(*auth, f"{admin_api}/users?username=e2e-admin&exact=true")
+    user_id = json.loads(users)[0]["id"]
+    password = secrets.token_urlsafe(18)
+    curl(*auth, "-X", "PUT", f"{admin_api}/users/{user_id}/reset-password", "-d", json.dumps({"type": "password", "value": password, "temporary": False}))
+
+    _, clients = curl(*auth, f"{admin_api}/clients?clientId=web_app")
+    web_app = json.loads(clients)[0]
+    curl(*auth, "-X", "PUT", f"{admin_api}/clients/{web_app['id']}", "-d", json.dumps({**web_app, "directAccessGrantsEnabled": True}))
+    try:
+        _, token = curl(
+            "-X", "POST", f"{kc}/realms/jhipster/protocol/openid-connect/token", "-d", "grant_type=password", "-d", "client_id=web_app",
+            "-d", "username=e2e-admin", "-d", "password=" + password, "-d", "scope=openid",
+        )
+        return json.loads(token)["access_token"]
+    finally:
+        curl(*auth, "-X", "PUT", f"{admin_api}/clients/{web_app['id']}", "-d", json.dumps({**web_app, "directAccessGrantsEnabled": False}))
+
+
 def claims(token):
     payload = token.split(".")[1]
     return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
@@ -96,10 +141,10 @@ def wait_for(description, probe, timeout=60):
 
 
 def stock_of(token, ticket_type_id):
-    status, stocks = call("GET", f"{INVENTORY}/ticket-stocks?size=1000", token)
-    if status != 200:
+    status, stocks = anonymous("GET", f"{INVENTORY}/public/availability?ticketTypeIds={ticket_type_id}")
+    if status != 200 or not stocks:
         return None
-    return next((s for s in stocks if s["ticketTypeId"] == ticket_type_id), None)
+    return stocks[0]
 
 
 def anonymous(method, url):
@@ -128,9 +173,33 @@ def pay(order, result):
     return anonymous("POST", f"{PAYMENT_PUBLIC}/mock-provider/{ref}/complete?result={result}")
 
 
-def checkout(token, ticket_type_id, quantity, key=None):
+def checkout(token, ticket_type_id, quantity, key=None, queue_pass=None):
     key = key or str(uuid.uuid4())
-    return call("POST", f"{ORDER}/checkout", token, {"items": [{"ticketTypeId": ticket_type_id, "quantity": quantity}]}, {"Idempotency-Key": key})
+    headers = {"Idempotency-Key": key}
+    if queue_pass:
+        headers["X-Queue-Pass"] = queue_pass
+    return call("POST", f"{ORDER}/checkout", token, {"items": [{"ticketTypeId": ticket_type_id, "quantity": quantity}]}, headers)
+
+
+def create_event(admin, slug, ticket_types, publish=True, waiting_room=False):
+    status, event = call(
+        "POST", f"{CATALOG}/admin/events?publish={'true' if publish else 'false'}", admin,
+        {
+            "name": "E2E " + slug, "slug": slug, "startTime": "2031-12-31T12:00:00Z", "waitingRoom": waiting_room,
+            "venue": {"name": "E2E Arena", "address": "Me Tri", "city": "Ha Noi"},
+            "ticketTypes": [{"name": name, "price": price, "totalQuantity": quantity} for name, quantity, price in ticket_types],
+        },
+    )
+    check(f"organiser creates {slug}", status == 201, (status, event))
+    return event, {t["name"]: t["id"] for t in event["ticketTypes"]}
+
+
+def queued_event_id(token, ticket_type_id):
+    status, body = anonymous("GET", f"{CATALOG}/public/events?size=100")
+    for event in body if status == 200 else []:
+        if any(t["id"] == ticket_type_id for t in event["ticketTypes"]):
+            return event["id"]
+    raise SystemExit("waiting room event not listed")
 
 
 def main():
@@ -138,24 +207,16 @@ def main():
     print("Token")
     check("service token carries ROLE_SERVICE", "ROLE_SERVICE" in claims(token).get("roles", []), claims(token).get("roles"))
 
-    print("Catalog -> Kafka -> inventory")
+    admin = fetch_admin_token()
+    check("organiser token carries ROLE_ADMIN", "ROLE_ADMIN" in claims(admin).get("roles", []), claims(admin).get("roles"))
+    status, _ = call("POST", f"{CATALOG}/events", token, {"name": "x", "slug": "x", "startTime": "2031-12-31T12:00:00Z", "status": "PUBLISHED"})
+    check("buyers and services cannot write the catalog", status == 403, status)
+
+    print("Organiser -> catalog -> Kafka -> inventory")
     run = uuid.uuid4().hex[:8]
-    _, venue = call("POST", f"{CATALOG}/venues", token, {"name": "E2E Arena " + run, "address": "Me Tri", "city": "Ha Noi", "capacity": 1000})
-    _, event = call(
-        "POST", f"{CATALOG}/events", token,
-        {"name": "E2E " + run, "slug": "e2e-" + run, "startTime": "2031-12-31T12:00:00Z", "status": "PUBLISHED", "venue": {"id": venue["id"]}},
-    )
-
-    def ticket_type(name, quantity, price):
-        status, body = call(
-            "POST", f"{CATALOG}/ticket-types", token,
-            {"name": name, "price": price, "currency": "VND", "totalQuantity": quantity, "event": {"id": event["id"]}},
-        )
-        check(f"create ticket type {name}", status == 201, status)
-        return body["id"]
-
-    vip = ticket_type("VIP", 100, 2500000)
     started = time.time()
+    event, types = create_event(admin, "e2e-" + run, [("VIP", 100, 2500000), ("Hot", 5, 900000)])
+    vip, hot = types["VIP"], types["Hot"]
     stock = wait_for("VIP stock in inventory", lambda: stock_of(token, vip))
     check("stock created from catalog event", stock["totalQuantity"] == 100 and stock["availableQuantity"] == 100, stock)
     print(f"        (visible in inventory after {time.time() - started:.1f}s)")
@@ -175,9 +236,16 @@ def main():
     check("cancel returns CANCELLED", status == 200 and cancelled["status"] == "CANCELLED", (status, cancelled))
     check("cancel puts seats back", stock_of(token, vip)["availableQuantity"] == 100)
 
+    print("Drafts")
+    _, draft_types = create_event(admin, "e2e-draft-" + run, [("Draft", 10, 100000)], publish=False)
+    wait_for("draft stock in inventory", lambda: stock_of(token, draft_types["Draft"]))
+    status, _ = anonymous("GET", f"{CATALOG}/public/events/e2e-draft-{run}")
+    check("drafts are hidden from buyers", status == 404, status)
+    status, _ = checkout(token, draft_types["Draft"], 1)
+    check("drafts cannot be bought by ticket type id", status == 400, status)
+
     print("Concurrent sell-out over HTTP")
     seats, buyers = 5, 40
-    hot = ticket_type("Hot", seats, 900000)
     wait_for("Hot stock in inventory", lambda: stock_of(token, hot))
     with ThreadPoolExecutor(max_workers=buyers) as pool:
         statuses = [status for status, _ in pool.map(lambda _: checkout(token, hot, 1), range(buyers))]
@@ -207,6 +275,19 @@ def main():
     check("paid order becomes CONFIRMED (payment -> outbox -> Kafka -> saga -> inventory confirm)", confirmed["status"] == "CONFIRMED", confirmed)
     check("confirmed seats stay sold", stock_of(token, vip)["availableQuantity"] == 98, stock_of(token, vip))
 
+    print("E-tickets and check-in")
+    status, tickets = call("GET", f"{ORDER}/my-tickets", token)
+    mine = [t for t in tickets or [] if t["orderCode"] == order["code"]]
+    check("confirmed order issued one ticket per seat", status == 200 and len(mine) == 2, (status, mine))
+    qr = mine[0]["qrPayload"] if mine else "none"
+    status, _ = call("POST", f"{ORDER}/admin/check-in", token, {"qrPayload": qr})
+    check("buyers cannot scan tickets", status == 403, status)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        outcomes = [body["outcome"] for _, body in pool.map(lambda _: call("POST", f"{ORDER}/admin/check-in", admin, {"qrPayload": qr}), range(8))]
+    check("8 gates scanning one ticket at once admit it exactly once", outcomes.count("ADMITTED") == 1 and outcomes.count("ALREADY_USED") == 7, outcomes)
+    _, forged = call("POST", f"{ORDER}/admin/check-in", admin, {"qrPayload": qr[:-4] + "AAAA"})
+    check("an edited QR code is invalid", forged["outcome"] == "INVALID", forged)
+
     status, order = checkout(token, vip, 1)
     pay(order, "declined")
     failed = order_status(token, order["code"], "FAILED")
@@ -222,6 +303,21 @@ def main():
 
     status, _ = anonymous("POST", f"{PAYMENT_PUBLIC}/webhooks/mock?ref=X&result=success&amount=1&transactionId=F1&signature=bad")
     check("forged webhook through the gateway is rejected", status == 400, status)
+
+    print("Waiting room")
+    _, queued_types = create_event(admin, "e2e-queue-" + run, [("Queue", 10, 300000)], waiting_room=True)
+    queued = queued_types["Queue"]
+    wait_for("waiting room stock in inventory", lambda: stock_of(token, queued))
+    status, _ = checkout(token, queued, 1)
+    check("no pass -> 428", status == 428, status)
+    queue = f"{GATEWAY}/api/waiting-room/{queued_event_id(token, queued)}"
+    status, joined = call("POST", queue, token)
+    check("join the queue through the gateway", status == 200 and joined["inQueue"], (status, joined))
+    admitted = wait_for("admission", lambda: (lambda r: r[1] if r[0] == 200 and r[1]["admitted"] else None)(call("GET", queue, token)), timeout=30)
+    status, order = checkout(token, queued, 1, queue_pass=admitted["pass"])
+    check("with the pass the checkout goes through", status == 201, (status, order))
+    status, _ = checkout(token, queued, 1, queue_pass=admitted["pass"][:-2] + "xx")
+    check("a tampered pass is refused", status == 428, status)
 
     print("Gateway rate limit on checkout")
     # Invalid quantity: whatever gets past the limiter is rejected by order with 400, so nothing is bought

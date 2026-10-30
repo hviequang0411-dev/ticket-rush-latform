@@ -18,5 +18,8 @@ public interface TicketTypeMapper extends EntityMapper<TicketTypeDTO, TicketType
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "id", source = "id")
     @Mapping(target = "name", source = "name")
+    // Order checks these before selling: only published events, and the waiting room when it is on
+    @Mapping(target = "status", source = "status")
+    @Mapping(target = "waitingRoom", source = "waitingRoom")
     EventDTO toDtoEventName(Event event);
 }

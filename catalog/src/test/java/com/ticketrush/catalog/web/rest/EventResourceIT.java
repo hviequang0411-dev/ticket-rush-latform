@@ -13,6 +13,7 @@ import com.ticketrush.catalog.IntegrationTest;
 import com.ticketrush.catalog.domain.Event;
 import com.ticketrush.catalog.domain.Venue;
 import com.ticketrush.catalog.domain.enumeration.EventStatus;
+import com.ticketrush.catalog.security.AuthoritiesConstants;
 import com.ticketrush.catalog.repository.EventRepository;
 import com.ticketrush.catalog.service.EventService;
 import com.ticketrush.catalog.service.dto.EventDTO;
@@ -44,7 +45,7 @@ import tools.jackson.databind.ObjectMapper;
 @IntegrationTest
 @ExtendWith(MockitoExtension.class)
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = AuthoritiesConstants.ADMIN)
 class EventResourceIT {
 
     private static final String DEFAULT_NAME = "AAAAAAAAAA";

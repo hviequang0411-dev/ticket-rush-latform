@@ -20,5 +20,13 @@ public interface CatalogClient {
         }
     }
 
-    record EventRef(Long id) {}
+    /**
+     * @param status only PUBLISHED events sell.
+     * @param waitingRoom buyers need an admission pass from the waiting room.
+     */
+    record EventRef(Long id, String status, Boolean waitingRoom) {
+        public EventRef(Long id) {
+            this(id, "PUBLISHED", false);
+        }
+    }
 }

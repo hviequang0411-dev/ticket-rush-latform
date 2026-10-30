@@ -11,5 +11,8 @@ public final class AuthoritiesConstants {
 
     public static final String ANONYMOUS = "ROLE_ANONYMOUS";
 
+    /** Other TicketRush services, authenticated with client credentials. */
+    public static final String SERVICE = "ROLE_SERVICE";
+
     private AuthoritiesConstants() {}
 }

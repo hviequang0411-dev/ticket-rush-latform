@@ -6,6 +6,8 @@ import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -36,4 +38,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         nativeQuery = true
     )
     List<Payment> lockExpiredPending(@Param("now") Instant now, @Param("limit") int limit);
+
+    /** Organiser search: {@code q} matches the order code; null status means any. */
+    @Query(
+        value = "select p from Payment p where lower(p.orderCode) like :q and (:status is null or p.status = :status) order by p.createdAt desc",
+        countQuery = "select count(p) from Payment p where lower(p.orderCode) like :q and (:status is null or p.status = :status)"
+    )
+    Page<Payment> search(
+        @Param("q") String likePattern,
+        @Param("status") PaymentStatus status,
+        Pageable pageable
+    );
 }

@@ -22,6 +22,7 @@ import com.ticketrush.order.domain.enumeration.OrderStatus;
 import com.ticketrush.order.repository.OrderItemRepository;
 import com.ticketrush.order.repository.OrderRepository;
 import com.ticketrush.order.repository.OutboxEventRepository;
+import com.ticketrush.order.repository.TicketRepository;
 import com.ticketrush.order.service.checkout.CheckoutRequest;
 import com.ticketrush.order.service.checkout.CheckoutService;
 import com.ticketrush.order.service.checkout.DependencyUnavailableException;
@@ -74,6 +75,9 @@ class OrderSagaIT {
     private OutboxEventRepository outboxEventRepository;
 
     @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
     private InputDestination input;
 
     @MockitoBean
@@ -118,6 +122,8 @@ class OrderSagaIT {
         assertThat(reload(order).getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         verify(inventoryClient, times(1)).confirm(order.getId());
         assertThat(orderEvents(order)).containsExactly("ORDER_CONFIRMED");
+        int seats = orderItemRepository.findAll().stream().filter(i -> i.getOrder().getId().equals(order.getId())).mapToInt(i -> i.getQuantity()).sum();
+        assertThat(ticketRepository.findAllByOrderIdOrderByIdAsc(order.getId())).hasSize(seats);
     }
 
     @Test

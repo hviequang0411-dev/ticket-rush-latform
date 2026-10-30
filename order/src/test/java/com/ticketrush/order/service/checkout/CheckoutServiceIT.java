@@ -20,6 +20,7 @@ import com.ticketrush.order.repository.OrderItemRepository;
 import com.ticketrush.order.repository.OrderRepository;
 import com.ticketrush.order.service.saga.OrderSaga;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +77,12 @@ class CheckoutServiceIT {
 
     @Autowired
     private OrderSaga orderSaga;
+
+    @Autowired
+    private QueuePasses queuePasses;
+
+    @Autowired
+    private Clock clock;
 
     @BeforeEach
     void stubCatalog() {
@@ -203,6 +210,44 @@ class CheckoutServiceIT {
 
         assertThat(orderRepository.count()).isZero();
         verify(inventoryClient, never()).reserve(any());
+    }
+
+    @Test
+    void unpublishedEventsDoNotSell() {
+        CatalogClient.TicketType draft = new CatalogClient.TicketType(VIP, "VIP", new BigDecimal("2500000"), "VND", null, null, new CatalogClient.EventRef(1L, "DRAFT", false));
+        when(catalogClient.getTicketType(VIP)).thenReturn(draft);
+
+        assertThatThrownBy(() -> checkoutService.checkout(ALICE, key(), request(item(VIP, 1)))).isInstanceOf(CheckoutRejectedException.class);
+        assertThat(orderRepository.count()).isZero();
+    }
+
+    @Test
+    void waitingRoomEventsNeedAPassForThatBuyerAndEvent() {
+        CatalogClient.TicketType hot = new CatalogClient.TicketType(VIP, "VIP", new BigDecimal("2500000"), "VND", null, null, new CatalogClient.EventRef(7L, "PUBLISHED", true));
+        when(catalogClient.getTicketType(VIP)).thenReturn(hot);
+        long future = clock.instant().getEpochSecond() + 600;
+
+        assertThatThrownBy(() -> checkoutService.checkout(ALICE, key(), request(item(VIP, 1)))).isInstanceOf(QueueRequiredException.class);
+        assertThatThrownBy(() -> checkoutService.checkout(ALICE, key(), request(item(VIP, 1)), pass(7L, "bob", future))).isInstanceOf(
+            QueueRequiredException.class
+        );
+        assertThatThrownBy(() -> checkoutService.checkout(ALICE, key(), request(item(VIP, 1)), pass(8L, ALICE, future))).isInstanceOf(
+            QueueRequiredException.class
+        );
+        assertThatThrownBy(() -> checkoutService.checkout(ALICE, key(), request(item(VIP, 1)), pass(7L, ALICE, future - 1200))).isInstanceOf(
+            QueueRequiredException.class
+        );
+        assertThatThrownBy(() -> checkoutService.checkout(ALICE, key(), request(item(VIP, 1)), pass(7L, ALICE, future) + "x")).isInstanceOf(
+            QueueRequiredException.class
+        );
+        assertThat(orderRepository.count()).isZero();
+
+        assertThat(checkoutService.checkout(ALICE, key(), request(item(VIP, 1)), pass(7L, ALICE, future)).order().code()).isNotBlank();
+    }
+
+    private String pass(Long eventId, String user, long expires) {
+        String body = eventId + "." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(user.getBytes(java.nio.charset.StandardCharsets.UTF_8)) + "." + expires;
+        return body + "." + queuePasses.sign(body);
     }
 
     @Test

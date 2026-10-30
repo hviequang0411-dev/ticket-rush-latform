@@ -13,6 +13,7 @@ import com.ticketrush.catalog.domain.enumeration.EventStatus;
 import com.ticketrush.catalog.repository.EventRepository;
 import com.ticketrush.catalog.repository.TicketTypeRepository;
 import com.ticketrush.catalog.repository.VenueRepository;
+import com.ticketrush.catalog.security.AuthoritiesConstants;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -98,6 +100,27 @@ class PublicCatalogResourceIT {
     @Test
     void anonymousVisitorsStillCannotChangeTheCatalog() throws Exception {
         mockMvc.perform(post("/api/events").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = AuthoritiesConstants.SERVICE)
+    void orderServiceCanReadTicketTypesButNotChangeThem() throws Exception {
+        TicketType type = ticketTypeRepository.findAll().getFirst();
+        mockMvc
+            .perform(get("/api/ticket-types/" + type.getId()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.event.status").isNotEmpty())
+            .andExpect(jsonPath("$.event.waitingRoom").value(false));
+        mockMvc.perform(put("/api/ticket-types/" + type.getId()).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/events")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = AuthoritiesConstants.USER)
+    void signedInBuyersCannotChangeTheCatalogEither() throws Exception {
+        mockMvc.perform(post("/api/events").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/ticket-types/1").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/venues")).andExpect(status().isForbidden());
     }
 
     private Event event(Venue venue, EventStatus status, String start) {

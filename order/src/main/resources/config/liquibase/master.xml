@@ -22,4 +22,5 @@
     <include file="config/liquibase/changelog/20261030090000_outbox.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20261030110000_order_saga.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20261030130000_outbox_trace.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20261031090000_ticket.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

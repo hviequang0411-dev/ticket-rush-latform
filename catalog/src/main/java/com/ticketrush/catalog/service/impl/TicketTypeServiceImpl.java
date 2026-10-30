@@ -5,9 +5,8 @@ import com.ticketrush.catalog.repository.TicketTypeRepository;
 import com.ticketrush.catalog.service.TicketTypeService;
 import com.ticketrush.catalog.service.dto.TicketTypeDTO;
 import com.ticketrush.catalog.service.event.TicketTypeChanged;
+import com.ticketrush.catalog.service.event.TicketTypeChanges;
 import com.ticketrush.catalog.service.mapper.TicketTypeMapper;
-import com.ticketrush.catalog.service.outbox.Outbox;
-import java.time.Clock;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -30,20 +29,12 @@ public class TicketTypeServiceImpl implements TicketTypeService {
 
     private final TicketTypeMapper ticketTypeMapper;
 
-    private final Outbox outbox;
+    private final TicketTypeChanges ticketTypeChanges;
 
-    private final Clock clock;
-
-    public TicketTypeServiceImpl(
-        TicketTypeRepository ticketTypeRepository,
-        TicketTypeMapper ticketTypeMapper,
-        Outbox outbox,
-        Clock clock
-    ) {
+    public TicketTypeServiceImpl(TicketTypeRepository ticketTypeRepository, TicketTypeMapper ticketTypeMapper, TicketTypeChanges ticketTypeChanges) {
         this.ticketTypeRepository = ticketTypeRepository;
         this.ticketTypeMapper = ticketTypeMapper;
-        this.outbox = outbox;
-        this.clock = clock;
+        this.ticketTypeChanges = ticketTypeChanges;
     }
 
     @Override
@@ -112,13 +103,6 @@ public class TicketTypeServiceImpl implements TicketTypeService {
     }
 
     private void raise(TicketTypeChanged.Type type, TicketType ticketType) {
-        Long eventId = ticketType.getEvent() != null ? ticketType.getEvent().getId() : null;
-        outbox.append(
-            TicketTypeChanged.TOPIC,
-            "TicketType",
-            ticketType.getId(),
-            type.name(),
-            new TicketTypeChanged(type, ticketType.getId(), eventId, ticketType.getTotalQuantity(), clock.instant())
-        );
+        ticketTypeChanges.raise(type, ticketType);
     }
 }

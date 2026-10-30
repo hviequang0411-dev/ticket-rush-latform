@@ -47,6 +47,8 @@ public class CheckoutService {
 
     private final CatalogClient catalogClient;
 
+    private final QueuePasses queuePasses;
+
     private final InventoryClient inventoryClient;
 
     private final OrderCodeGenerator orderCodeGenerator;
@@ -63,6 +65,7 @@ public class CheckoutService {
         OrderRepository orderRepository,
         OrderItemRepository orderItemRepository,
         CatalogClient catalogClient,
+        QueuePasses queuePasses,
         InventoryClient inventoryClient,
         OrderCodeGenerator orderCodeGenerator,
         TransactionTemplate transactionTemplate,
@@ -73,6 +76,7 @@ public class CheckoutService {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.catalogClient = catalogClient;
+        this.queuePasses = queuePasses;
         this.inventoryClient = inventoryClient;
         this.orderCodeGenerator = orderCodeGenerator;
         this.transactionTemplate = transactionTemplate;
@@ -90,10 +94,18 @@ public class CheckoutService {
      * @throws DependencyUnavailableException if catalog or inventory did not answer; retry with the same key.
      */
     public CheckoutResult checkout(String userLogin, String idempotencyKey, CheckoutRequest request) {
+        return checkout(userLogin, idempotencyKey, request, null);
+    }
+
+    /**
+     * @param queuePass the waiting room's admission pass, required when an event sells through the waiting room.
+     * @throws QueueRequiredException if it is required and missing, expired or for someone else.
+     */
+    public CheckoutResult checkout(String userLogin, String idempotencyKey, CheckoutRequest request, String queuePass) {
         Timer.Sample sample = Timer.start(meterRegistry);
         String outcome = "error";
         try {
-            CheckoutResult result = placeOrder(userLogin, idempotencyKey, request);
+            CheckoutResult result = placeOrder(userLogin, idempotencyKey, request, queuePass);
             outcome = result.replayed() ? "replayed" : "accepted";
             return result;
         } catch (SoldOutException e) {
@@ -108,12 +120,15 @@ public class CheckoutService {
         } catch (OrderStateException e) {
             outcome = "conflict";
             throw e;
+        } catch (QueueRequiredException e) {
+            outcome = "queue_required";
+            throw e;
         } finally {
             sample.stop(Timer.builder("ticketrush.checkout").description("Checkout requests by outcome").tag("outcome", outcome).register(meterRegistry));
         }
     }
 
-    private CheckoutResult placeOrder(String userLogin, String idempotencyKey, CheckoutRequest request) {
+    private CheckoutResult placeOrder(String userLogin, String idempotencyKey, CheckoutRequest request, String queuePass) {
         LOG.debug("Request to checkout for {} with key {} : {}", userLogin, idempotencyKey, request);
         Optional<Order> existing = orderRepository.findOneWithItemsByIdempotencyKey(idempotencyKey);
         if (existing.isPresent()) {
@@ -127,6 +142,7 @@ public class CheckoutService {
         Instant now = clock.instant();
         List<CatalogClient.TicketType> ticketTypes = quantities.keySet().stream().map(this::ticketType).toList();
         validate(ticketTypes, now);
+        requireAdmission(ticketTypes, userLogin, queuePass);
 
         Order order;
         try {
@@ -224,12 +240,30 @@ public class CheckoutService {
             throw new CheckoutRejectedException("All tickets of an order must be in the same currency");
         }
         for (CatalogClient.TicketType type : ticketTypes) {
+            // Drafts, cancelled and past events don't sell, even to someone who guessed a ticket type id
+            if (type.event() != null && type.event().status() != null && !"PUBLISHED".equals(type.event().status())) {
+                throw new CheckoutRejectedException("Ticket type " + type.id() + " is not on sale");
+            }
             boolean notStarted = type.saleStart() != null && now.isBefore(type.saleStart());
             boolean ended = type.saleEnd() != null && !now.isBefore(type.saleEnd());
             if (notStarted || ended) {
                 throw new CheckoutRejectedException("Ticket type " + type.id() + " is not on sale");
             }
         }
+    }
+
+    private void requireAdmission(List<CatalogClient.TicketType> ticketTypes, String userLogin, String queuePass) {
+        ticketTypes
+            .stream()
+            .map(CatalogClient.TicketType::event)
+            .filter(event -> event != null && Boolean.TRUE.equals(event.waitingRoom()))
+            .map(CatalogClient.EventRef::id)
+            .distinct()
+            .filter(eventId -> !queuePasses.admits(queuePass, eventId, userLogin))
+            .findFirst()
+            .ifPresent(eventId -> {
+                throw new QueueRequiredException(eventId);
+            });
     }
 
     private static InventoryClient.ReserveRequest reserveRequest(Order order) {

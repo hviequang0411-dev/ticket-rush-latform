@@ -138,7 +138,7 @@ class PaymentFlowServiceIT {
 
         assertThat(status(payment)).isEqualTo(PaymentStatus.SUCCEEDED);
         assertThat(results()).hasSize(1);
-        assertThat(webhookEventRepository.count()).isEqualTo(1);
+        assertThat(webhookEventRepository.findAll()).singleElement().satisfies(event -> assertThat(event.getDeliveries()).isEqualTo(10));
     }
 
     @Test

@@ -3,7 +3,9 @@ package com.ticketrush.inventory.repository;
 import com.ticketrush.inventory.domain.StockHold;
 import com.ticketrush.inventory.domain.enumeration.HoldStatus;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -30,4 +32,22 @@ public interface StockHoldRepository extends JpaRepository<StockHold, Long> {
         nativeQuery = true
     )
     List<StockHold> lockExpiredHolds(@Param("now") Instant now, @Param("limit") int limit);
+
+    /** Seats per ticket type and hold status, for the organiser's stock view. */
+    @Query(
+        "select h.stock.ticketTypeId as ticketTypeId, h.status as status, sum(h.quantity) as quantity from StockHold h " +
+        "where h.stock.ticketTypeId in :ticketTypeIds and h.status in :statuses group by h.stock.ticketTypeId, h.status"
+    )
+    List<SeatsByStatus> sumSeats(@Param("ticketTypeIds") Collection<Long> ticketTypeIds, @Param("statuses") Collection<HoldStatus> statuses);
+
+    @EntityGraph(attributePaths = "stock")
+    List<StockHold> findAllByStatusOrderByExpiresAtAsc(HoldStatus status, Pageable pageable);
+
+    interface SeatsByStatus {
+        Long getTicketTypeId();
+
+        HoldStatus getStatus();
+
+        Long getQuantity();
+    }
 }

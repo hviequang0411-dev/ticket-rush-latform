@@ -20,6 +20,7 @@ public record PublicEvent(
     Instant endTime,
     String status,
     String posterUrl,
+    boolean waitingRoom,
     PublicVenue venue,
     List<PublicTicketType> ticketTypes
 ) {
@@ -51,7 +52,7 @@ public record PublicEvent(
         }
     }
 
-    static PublicEvent of(Event event, List<TicketType> ticketTypes) {
+    public static PublicEvent of(Event event, List<TicketType> ticketTypes) {
         return new PublicEvent(
             event.getId(),
             event.getName(),
@@ -61,6 +62,7 @@ public record PublicEvent(
             event.getEndTime(),
             event.getStatus().name(),
             event.getPosterUrl(),
+            Boolean.TRUE.equals(event.getWaitingRoom()),
             PublicVenue.of(event.getVenue()),
             ticketTypes.stream().map(PublicTicketType::of).toList()
         );

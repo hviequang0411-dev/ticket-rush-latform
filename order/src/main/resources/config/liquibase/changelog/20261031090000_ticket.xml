@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- One e-ticket per seat of a confirmed order; scanning at the gate moves it VALID -> USED exactly once -->
+    <changeSet id="20261031090000-1" author="ticketrush">
+        <createTable tableName="ticket">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(32)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="order_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_ticket_order" references="ticket_order(id)" deleteCascade="true"/>
+            </column>
+            <column name="order_code" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_login" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ticket_type_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seat_no" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seats_of_type" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issued_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checked_in_at" type="timestamp with time zone"/>
+            <column name="checked_in_by" type="varchar(100)"/>
+        </createTable>
+        <!-- A redelivered confirmation cannot issue a second ticket for the same seat -->
+        <addUniqueConstraint tableName="ticket" columnNames="order_id, ticket_type_id, seat_no" constraintName="ux_ticket_seat"/>
+        <createIndex tableName="ticket" indexName="ix_ticket_user_login">
+            <column name="user_login"/>
+        </createIndex>
+        <sql>ALTER TABLE ticket ADD CONSTRAINT ck_ticket_status CHECK (status IN ('VALID', 'USED', 'CANCELLED'))</sql>
+    </changeSet>
+</databaseChangeLog>

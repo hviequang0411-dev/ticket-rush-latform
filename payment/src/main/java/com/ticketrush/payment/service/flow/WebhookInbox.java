@@ -39,6 +39,7 @@ public class WebhookInbox {
             return requiresNew.execute(status ->
                 repository
                     .findByProviderAndEventKey(provider, eventKey)
+                    .map(this::redelivered)
                     .orElseGet(() ->
                         repository.saveAndFlush(
                             new PaymentWebhookEvent()
@@ -52,7 +53,12 @@ public class WebhookInbox {
             );
         } catch (DataIntegrityViolationException e) {
             // The same callback arrived concurrently and the other delivery stored it first
-            return requiresNew.execute(status -> repository.findByProviderAndEventKey(provider, eventKey).orElseThrow(() -> e));
+            return requiresNew.execute(status -> repository.findByProviderAndEventKey(provider, eventKey).map(this::redelivered).orElseThrow(() -> e));
         }
+    }
+
+    private PaymentWebhookEvent redelivered(PaymentWebhookEvent event) {
+        repository.countRedelivery(event.getId(), clock.instant());
+        return repository.findById(event.getId()).orElseThrow();
     }
 }

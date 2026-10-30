@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.ticketrush.catalog.IntegrationTest;
 import com.ticketrush.catalog.domain.Venue;
+import com.ticketrush.catalog.security.AuthoritiesConstants;
 import com.ticketrush.catalog.repository.VenueRepository;
 import com.ticketrush.catalog.service.dto.VenueDTO;
 import com.ticketrush.catalog.service.mapper.VenueMapper;
@@ -32,7 +33,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = AuthoritiesConstants.ADMIN)
 class VenueResourceIT {
 
     private static final String DEFAULT_NAME = "AAAAAAAAAA";

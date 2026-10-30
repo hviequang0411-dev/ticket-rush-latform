@@ -15,6 +15,8 @@ services:
       - SPRING_R2DBC_PASSWORD=${GATEWAY_DB_PASSWORD:?}
       - SPRING_LIQUIBASE_PASSWORD=${GATEWAY_DB_PASSWORD:?}
       - SPRING_DATA_REDIS_HOST=gateway-redis
+      # Signs waiting room admission passes; order verifies them
+      - TICKETRUSH_WAITING_ROOM_PASS_SECRET=${QUEUE_PASS_SECRET:?}
       - JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET=${JHIPSTER_JWT_BASE64_SECRET:?}
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://gateway-postgresql:5432/gateway
     ports:
@@ -152,6 +154,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://order-postgresql:5432/order
       - SPRING_DATASOURCE_USERNAME=order
       - SPRING_DATASOURCE_PASSWORD=${ORDER_DB_PASSWORD:?}
+      # Signs the QR codes on e-tickets
+      - TICKETRUSH_TICKETS_SIGNING_SECRET=${TICKET_SIGNING_SECRET:?}
+      # Verifies the waiting room admission passes the gateway signs
+      - TICKETRUSH_WAITING_ROOM_PASS_SECRET=${QUEUE_PASS_SECRET:?}
       - JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET=${JHIPSTER_JWT_BASE64_SECRET:?}
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://order-postgresql:5432/order
       - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:9092

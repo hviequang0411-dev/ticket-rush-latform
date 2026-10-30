@@ -33,6 +33,9 @@ public class CheckoutResource {
 
     public static final String IDEMPOTENCY_KEY = "Idempotency-Key";
 
+    /** Admission pass from the gateway's waiting room, for events that sell through it. */
+    public static final String QUEUE_PASS = "X-Queue-Pass";
+
     private static final Logger LOG = LoggerFactory.getLogger(CheckoutResource.class);
 
     private final CheckoutService checkoutService;
@@ -47,15 +50,17 @@ public class CheckoutResource {
      * Clients send a fresh {@code Idempotency-Key} (for example a UUID) per purchase attempt and reuse it when
      * retrying: the retry returns the original order with status 200 instead of buying twice.
      *
-     * @return 201 with the RESERVED order, 200 for a replay, 409 when sold out, 503 when a dependency is down.
+     * @return 201 with the RESERVED order, 200 for a replay, 409 when sold out, 428 when the event needs a waiting
+     *     room pass, 503 when a dependency is down.
      */
     @PostMapping("/checkout")
     public ResponseEntity<OrderSummary> checkout(
         @RequestHeader(IDEMPOTENCY_KEY) @Pattern(regexp = "[A-Za-z0-9_-]{8,64}") String idempotencyKey,
+        @RequestHeader(value = QUEUE_PASS, required = false) String queuePass,
         @Valid @RequestBody CheckoutRequest request
     ) {
         LOG.debug("REST request to checkout : {}", request);
-        CheckoutResult result = checkoutService.checkout(currentUser(), idempotencyKey, request);
+        CheckoutResult result = checkoutService.checkout(currentUser(), idempotencyKey, request, queuePass);
         if (result.replayed()) {
             return ResponseEntity.ok(result.order());
         }

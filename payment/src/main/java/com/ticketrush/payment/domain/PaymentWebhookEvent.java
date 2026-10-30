@@ -52,6 +52,13 @@ public class PaymentWebhookEvent implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     private Payment payment;
 
+    /** Deliveries of this callback, retries included; only the first one is applied. */
+    @Column(name = "deliveries", nullable = false)
+    private Integer deliveries = 1;
+
+    @Column(name = "last_received_at")
+    private Instant lastReceivedAt;
+
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
     public Long getId() {
@@ -159,6 +166,14 @@ public class PaymentWebhookEvent implements Serializable {
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
+
+    public Integer getDeliveries() {
+        return deliveries;
+    }
+
+    public Instant getLastReceivedAt() {
+        return lastReceivedAt;
+    }
 
     @Override
     public boolean equals(Object o) {

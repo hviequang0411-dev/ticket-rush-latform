@@ -99,7 +99,7 @@ End to end, through the gateway, against the running stack (gateway on port 8088
 
 ```bash
 docker compose -f docker-compose/docker-compose.yml -f scripts/e2e/compose.override.yml up -d --wait
-python scripts/e2e/phase2.py
+python scripts/e2e/e2e.py
 ```
 
 It checks the Kafka stock sync, checkout, idempotent replay, cancel, 40 concurrent buyers for 5 seats over HTTP

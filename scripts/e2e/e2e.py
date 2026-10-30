@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""End-to-end check of the phase 2 flow through the gateway, against the running docker-compose stack.
+"""End-to-end check through the gateway, against the running docker-compose stack.
 
     docker compose -f docker-compose/docker-compose.yml -f scripts/e2e/compose.override.yml up -d --wait
-    python scripts/e2e/phase2.py
+    python scripts/e2e/e2e.py
 
 Covers: catalog -> Kafka -> inventory stock sync, checkout through gateway -> order -> catalog/inventory,
-idempotent replay, cancel, a concurrent sell-out over HTTP, hold expiry -> Kafka -> order EXPIRED, and the
+idempotent replay, cancel, a concurrent sell-out over HTTP, hold expiry -> Kafka -> order EXPIRED, the payment
+saga (paid -> CONFIRMED, declined -> FAILED, paid after expiry -> REFUNDED, forged webhook rejected), and the
 gateway's per-user rate limit on checkout.
 The token is a client-credentials token of the `internal` client, fetched inside the compose network so that
 its issuer is http://keycloak:9080 like the services expect.
@@ -26,6 +27,7 @@ GATEWAY = os.environ.get("TICKETRUSH_GATEWAY", "http://localhost:8088")
 CATALOG = f"{GATEWAY}/services/catalog/api"
 INVENTORY = f"{GATEWAY}/services/inventory/api"
 ORDER = f"{GATEWAY}/services/order/api"
+PAYMENT_PUBLIC = f"{GATEWAY}/services/payment/api/public"
 ENV_FILE = Path(__file__).resolve().parents[2] / "docker-compose" / ".env"
 NETWORK = "docker-compose_default"
 CURL_IMAGE = "curlimages/curl:8.17.0"
@@ -100,6 +102,32 @@ def stock_of(token, ticket_type_id):
     return next((s for s in stocks if s["ticketTypeId"] == ticket_type_id), None)
 
 
+def anonymous(method, url):
+    request = urllib.request.Request(url, data=b"" if method == "POST" else None, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            raw = response.read()
+            return response.status, json.loads(raw) if raw and response.headers.get_content_type() == "application/json" else raw
+    except urllib.error.HTTPError as error:
+        return error.code, error.read()
+
+
+def order_status(token, code, expected, timeout=60):
+    def probe():
+        status, body = call("GET", f"{ORDER}/my-orders/{code}", token)
+        return body if status == 200 and body["status"] == expected else None
+
+    try:
+        return wait_for(f"order {code} to become {expected}", probe, timeout)
+    except SystemExit:
+        return call("GET", f"{ORDER}/my-orders/{code}", token)[1]
+
+
+def pay(order, result):
+    ref = order["paymentUrl"].rstrip("/").rsplit("/", 1)[-1]
+    return anonymous("POST", f"{PAYMENT_PUBLIC}/mock-provider/{ref}/complete?result={result}")
+
+
 def checkout(token, ticket_type_id, quantity, key=None):
     key = key or str(uuid.uuid4())
     return call("POST", f"{ORDER}/checkout", token, {"items": [{"ticketTypeId": ticket_type_id, "quantity": quantity}]}, {"Idempotency-Key": key})
@@ -135,7 +163,7 @@ def main():
     print("Checkout")
     key = str(uuid.uuid4())
     status, order = checkout(token, vip, 2, key)
-    check("checkout returns 201 RESERVED", status == 201 and order["status"] == "RESERVED", (status, order))
+    check("checkout returns 201 AWAITING_PAYMENT with a payment URL", status == 201 and order["status"] == "AWAITING_PAYMENT" and order.get("paymentUrl"), (status, order))
     check("total priced by catalog", order and float(order["totalAmount"]) == 5000000, order)
     status, replay = checkout(token, vip, 2, key)
     check("retry with same Idempotency-Key returns 200 and the same order", status == 200 and replay["code"] == order["code"], (status, replay))
@@ -167,6 +195,32 @@ def main():
     )
     check("order EXPIRED after its hold ran out", expired["status"] == "EXPIRED")
     check("expired seats back on sale", stock_of(token, vip)["availableQuantity"] == 100, stock_of(token, vip))
+
+    print("Payment saga")
+    status, order = checkout(token, vip, 2)
+    status, page = anonymous("GET", order["paymentUrl"].replace("http://localhost:8080", GATEWAY))
+    check("mock provider page is public", status == 200, status)
+    status, _ = pay(order, "success")
+    check("mock provider accepts the payment", status == 200, status)
+    confirmed = order_status(token, order["code"], "CONFIRMED")
+    check("paid order becomes CONFIRMED (payment -> outbox -> Kafka -> saga -> inventory confirm)", confirmed["status"] == "CONFIRMED", confirmed)
+    check("confirmed seats stay sold", stock_of(token, vip)["availableQuantity"] == 98, stock_of(token, vip))
+
+    status, order = checkout(token, vip, 1)
+    pay(order, "declined")
+    failed = order_status(token, order["code"], "FAILED")
+    check("declined payment fails the order", failed["status"] == "FAILED" and failed["failureReason"] == "PAYMENT_FAILED", failed)
+    wait_for("declined seats back on sale", lambda: stock_of(token, vip)["availableQuantity"] == 98)
+    check("declined seats back on sale", stock_of(token, vip)["availableQuantity"] == 98)
+
+    status, order = checkout(token, vip, 1)
+    order_status(token, order["code"], "EXPIRED", timeout=90)
+    status, _ = pay(order, "success")
+    refunded = order_status(token, order["code"], "REFUNDED")
+    check("payment after the seats expired is refunded", refunded["status"] == "REFUNDED", refunded)
+
+    status, _ = anonymous("POST", f"{PAYMENT_PUBLIC}/webhooks/mock?ref=X&result=success&amount=1&transactionId=F1&signature=bad")
+    check("forged webhook through the gateway is rejected", status == 400, status)
 
     print("Gateway rate limit on checkout")
     # Invalid quantity: whatever gets past the limiter is rejected by order with 400, so nothing is bought

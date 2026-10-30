@@ -221,7 +221,7 @@ ngay trên gateway).
 | `observability/` | Prometheus, Grafana (dashboard `ticketrush.json`), Tempo |
 | `load/` | Kịch bản k6 (`browse.js`, `on-sale.js`), kết quả trong `load/results/` |
 | `deploy/` | Triển khai lên một VM: `compose.prod.yml`, Caddy, `deploy.sh` |
-| `scripts/` | `harden-compose.py` (áp lại chỉnh sửa sau khi sinh code), `make-readonly*.py`, `e2e/` |
+| `scripts/` | `harden-compose.py` (áp lại chỉnh sửa sau khi sinh code), `make-readonly*.py`, `e2e/`, `seed-demo.py` (12 sự kiện mẫu tiếng Việt qua API ban tổ chức, ẩn sự kiện test e2e) |
 | `docs/adr/` | Quyết định kiến trúc: 0001 Consul, 0002 Saga, 0003 Chống oversell, 0004 Outbox |
 | `.github/workflows/ci.yml` | CI: test các service thay đổi, UI gateway, kiểm tra compose |
 
@@ -250,6 +250,7 @@ docker compose -f docker-compose/docker-compose.yml up -d --wait
 | Một test cụ thể (nhanh) | `./mvnw -ntp verify -DskipJib -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=ReservationServiceIT` |
 | Toàn bộ một service | `cd inventory && ./mvnw -ntp verify` |
 | End-to-end qua gateway | `docker compose ... -f scripts/e2e/compose.override.yml up -d --wait` rồi `python scripts/e2e/e2e.py` (tự tạo user `e2e-admin` cho các API quản trị) |
+| Dữ liệu demo cho giao diện | `python scripts/seed-demo.py` (stack đang chạy; idempotent) |
 | Tải mở bán | `load/run.sh` (k6) |
 
 ## 11. Giới hạn đã biết

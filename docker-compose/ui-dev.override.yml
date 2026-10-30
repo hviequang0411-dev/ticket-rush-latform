@@ -1,0 +1,9 @@
+# Trying the buyer SPA locally with its Vite dev server (http://localhost:9000, proxying to the gateway):
+#   docker compose -f docker-compose/docker-compose.yml -f docker-compose/ui-dev.override.yml up -d --wait
+#   cd ui-prototype && npm run dev
+# Browsers must resolve "keycloak" (hosts file: 127.0.0.1 keycloak), since tokens are issued by http://keycloak:9080.
+services:
+  payment:
+    environment:
+      # The mock provider's page, and the redirect back after paying, stay on the SPA's origin
+      - TICKETRUSH_PAYMENT_PUBLIC_BASE_URL=http://localhost:9000

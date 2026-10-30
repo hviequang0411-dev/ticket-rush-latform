@@ -260,3 +260,62 @@ jhipster:
 # ===================================================================
 
 # application:
+
+# Calls to catalog, inventory and payment (ServiceClientsConfiguration). All of them are idempotent, so retrying
+# a timeout or a 5xx is safe; 4xx answers (sold out, already paid) are business results, never retried or
+# counted as failures.
+resilience4j:
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        # Any failed call except a 4xx answer: timeouts and I/O errors while reading a response surface as plain
+        # RestClientException, not only as ResourceAccessException (see ResilientClientTest)
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+    instances:
+      catalog:
+        base-config: default
+      inventory:
+        base-config: default
+      payment:
+        base-config: default
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - org.springframework.web.client.RestClientException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+    instances:
+      catalog:
+        base-config: default
+      inventory:
+        base-config: default
+      payment:
+        base-config: default
+  bulkhead:
+    configs:
+      default:
+        # One slow dependency can hold at most this many request threads
+        max-concurrent-calls: 25
+        max-wait-duration: 100ms
+    instances:
+      catalog:
+        base-config: default
+      inventory:
+        base-config: default
+      payment:
+        base-config: default

@@ -32,6 +32,9 @@
         <start-class>com.ticketrush.order.OrderApp</start-class>
         <!-- UTC avoids JVM default zones PostgreSQL 18 rejects (e.g. Windows "Asia/Saigon") -->
         <argLine>-Xmx1G -Duser.timezone=UTC</argLine>
+        <resilience4j.version>2.4.0</resilience4j.version>
+        <!-- Shaded standalone jar: no Jetty or Jackson versions leaking onto the test classpath -->
+        <wiremock.version>3.13.2</wiremock.version>
         <m2e.apt.activation>jdt_apt</m2e.apt.activation>
         <run.addResources>false</run.addResources>
         <spring-boot.version>${project.parent.version}</spring-boot.version>
@@ -66,6 +69,14 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Before Spring Cloud's BOM, which pins Resilience4j 2.3.0 (built for Boot 3) -->
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bom</artifactId>
+                <version>${resilience4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -275,9 +286,25 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-bootstrap</artifactId>
         </dependency>
+        <!--
+            Resilience4j for Spring Boot 4, instead of spring-cloud-starter-circuitbreaker-resilience4j, which pulls
+            resilience4j-spring-boot3 onto a Boot 4 classpath (see ServiceClientsConfiguration)
+        -->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <!-- Not in resilience4j-bom -->
+            <version>${resilience4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>${wiremock.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>

@@ -111,11 +111,15 @@ spring:
           enabled: false
     # Topic contract; mirrored in src/test/resources/config/application.yml
     function:
-      definition: holdExpired
+      definition: holdExpired;paymentResults
     stream:
       bindings:
         holdExpired-in-0:
           destination: inventory.hold-expired.v1
+          content-type: application/json
+          group: order
+        paymentResults-in-0:
+          destination: payment.result.v1
           content-type: application/json
           group: order
   docker:

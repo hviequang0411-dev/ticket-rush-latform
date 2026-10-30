@@ -2,6 +2,7 @@ package com.ticketrush.order.config;
 
 import com.ticketrush.order.client.CatalogClient;
 import com.ticketrush.order.client.InventoryClient;
+import com.ticketrush.order.client.PaymentClient;
 import org.springframework.boot.restclient.autoconfigure.RestClientBuilderConfigurer;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
@@ -60,6 +61,11 @@ public class ServiceClientsConfiguration {
     @Bean
     public CatalogClient catalogClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder, OAuth2AuthorizedClientManager manager) {
         return client(loadBalancedRestClientBuilder, manager, "http://catalog", CatalogClient.class);
+    }
+
+    @Bean
+    public PaymentClient paymentClient(@LoadBalanced RestClient.Builder loadBalancedRestClientBuilder, OAuth2AuthorizedClientManager manager) {
+        return client(loadBalancedRestClientBuilder, manager, "http://payment", PaymentClient.class);
     }
 
     private static <T> T client(RestClient.Builder builder, OAuth2AuthorizedClientManager manager, String baseUrl, Class<T> type) {

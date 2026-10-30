@@ -7,14 +7,13 @@ import com.ticketrush.order.domain.OrderItem;
 import com.ticketrush.order.domain.enumeration.OrderStatus;
 import com.ticketrush.order.repository.OrderItemRepository;
 import com.ticketrush.order.repository.OrderRepository;
+import com.ticketrush.order.service.saga.OrderSaga;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -29,20 +28,16 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Basic checkout: price from catalog, hold seats in inventory, record the outcome.
+ * Checkout: price from catalog, hold seats in inventory, then hand the order to {@link OrderSaga} to open its
+ * payment. Everything after that (confirmation, expiry, refunds, cancellation) is the saga's.
  * <p>
- * No database transaction is open while calling other services; each step that writes commits on its own. Phase 3
- * turns this into an orchestrated saga with payment and compensations; for now a failed reserve marks the order
- * FAILED and releases whatever inventory may have held.
+ * No database transaction is open while calling other services; each step that writes commits on its own. A
+ * failed reserve marks the order FAILED and releases whatever inventory may have held.
  */
 @Service
 public class CheckoutService {
 
     private static final Logger LOG = LoggerFactory.getLogger(CheckoutService.class);
-
-    private static final Set<OrderStatus> EXPIRABLE = EnumSet.of(OrderStatus.RESERVED, OrderStatus.AWAITING_PAYMENT);
-
-    private static final Set<OrderStatus> CANCELLABLE = EnumSet.of(OrderStatus.PENDING, OrderStatus.RESERVED, OrderStatus.AWAITING_PAYMENT);
 
     private final OrderRepository orderRepository;
 
@@ -58,6 +53,8 @@ public class CheckoutService {
 
     private final Clock clock;
 
+    private final OrderSaga orderSaga;
+
     public CheckoutService(
         OrderRepository orderRepository,
         OrderItemRepository orderItemRepository,
@@ -65,7 +62,8 @@ public class CheckoutService {
         InventoryClient inventoryClient,
         OrderCodeGenerator orderCodeGenerator,
         TransactionTemplate transactionTemplate,
-        Clock clock
+        Clock clock,
+        OrderSaga orderSaga
     ) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -74,6 +72,7 @@ public class CheckoutService {
         this.orderCodeGenerator = orderCodeGenerator;
         this.transactionTemplate = transactionTemplate;
         this.clock = clock;
+        this.orderSaga = orderSaga;
     }
 
     /**
@@ -110,9 +109,9 @@ public class CheckoutService {
                 .orElseThrow(() -> e);
         }
 
+        InventoryClient.Reservation reservation;
         try {
-            InventoryClient.Reservation reservation = inventoryClient.reserve(reserveRequest(order));
-            return new CheckoutResult(update(order.getId(), o -> o.status(OrderStatus.RESERVED).expiresAt(reservation.expiresAt())), false);
+            reservation = inventoryClient.reserve(reserveRequest(order));
         } catch (HttpClientErrorException.Conflict e) {
             fail(order.getId(), "SOLD_OUT");
             throw new SoldOutException(order.getCode());
@@ -125,42 +124,15 @@ public class CheckoutService {
             releaseQuietly(order.getId());
             throw new DependencyUnavailableException("Inventory did not answer", e);
         }
+        update(order.getId(), o -> o.status(OrderStatus.RESERVED).expiresAt(reservation.expiresAt()));
+        return new CheckoutResult(orderSaga.requestPayment(order.getId()), false);
     }
 
     /**
      * Cancels an order that is not paid yet and puts its seats back on sale. Idempotent.
      */
     public OrderSummary cancel(String userLogin, String code) {
-        Order order = orderRepository.findOneWithItemsByCodeAndUserLogin(code, userLogin).orElseThrow(() -> new OrderNotFoundException(code));
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            return OrderSummary.of(order);
-        }
-        if (!CANCELLABLE.contains(order.getStatus())) {
-            throw new OrderStateException("Order " + code + " is " + order.getStatus() + " and can no longer be cancelled");
-        }
-        try {
-            inventoryClient.release(order.getId());
-        } catch (HttpClientErrorException.Conflict e) {
-            LOG.debug("Order {} had no holds to release", code);
-        } catch (RestClientException e) {
-            throw new DependencyUnavailableException("Inventory did not answer", e);
-        }
-        return update(order.getId(), o -> o.status(OrderStatus.CANCELLED));
-    }
-
-    /**
-     * Marks an order whose seat hold ran out as EXPIRED. Idempotent; ignores orders that are already final.
-     */
-    public void expire(Long orderId) {
-        transactionTemplate.executeWithoutResult(status ->
-            orderRepository
-                .findById(orderId)
-                .filter(order -> EXPIRABLE.contains(order.getStatus()))
-                .ifPresent(order -> {
-                    LOG.info("Order {} expired", order.getCode());
-                    order.status(OrderStatus.EXPIRED).updatedAt(clock.instant());
-                })
-        );
+        return orderSaga.cancel(userLogin, code);
     }
 
     public Page<OrderSummary> findMine(String userLogin, Pageable pageable) {

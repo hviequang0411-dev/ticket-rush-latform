@@ -26,11 +26,15 @@ spring:
       enabled: false
     # Same topic contract as src/main/resources/config/application.yml (this file replaces it in tests)
     function:
-      definition: holdExpired
+      definition: holdExpired;paymentResults
     stream:
       bindings:
         holdExpired-in-0:
           destination: inventory.hold-expired.v1
+          content-type: application/json
+          group: order
+        paymentResults-in-0:
+          destination: payment.result.v1
           content-type: application/json
           group: order
   # Replace by 'prod, faker' to add the faker context and have sample data loaded in production
@@ -105,3 +109,8 @@ management:
   health:
     mail:
       enabled: false
+
+ticketrush:
+  outbox:
+    # Tests relay explicitly through OutboxRelay.relayBatch() instead of the scheduler
+    relay-enabled: false

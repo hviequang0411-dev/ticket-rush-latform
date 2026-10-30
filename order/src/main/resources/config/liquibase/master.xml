@@ -19,4 +19,6 @@
     <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
     <include file="config/liquibase/changelog/20261029130000_order_version.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20261030090000_outbox.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20261030110000_order_saga.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

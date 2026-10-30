@@ -19,6 +19,7 @@ public record OrderSummary(
     Instant createdAt,
     Instant expiresAt,
     String failureReason,
+    String paymentUrl,
     List<Item> items
 ) {
     public record Item(Long eventId, Long ticketTypeId, int quantity, BigDecimal unitPrice) {}
@@ -38,6 +39,7 @@ public record OrderSummary(
             order.getCreatedAt(),
             order.getExpiresAt(),
             order.getFailureReason(),
+            order.getPaymentUrl(),
             items
         );
     }

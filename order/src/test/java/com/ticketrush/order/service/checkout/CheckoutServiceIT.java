@@ -13,10 +13,12 @@ import static org.mockito.Mockito.when;
 import com.ticketrush.order.IntegrationTest;
 import com.ticketrush.order.client.CatalogClient;
 import com.ticketrush.order.client.InventoryClient;
+import com.ticketrush.order.client.PaymentClient;
 import com.ticketrush.order.domain.Order;
 import com.ticketrush.order.domain.enumeration.OrderStatus;
 import com.ticketrush.order.repository.OrderItemRepository;
 import com.ticketrush.order.repository.OrderRepository;
+import com.ticketrush.order.service.saga.OrderSaga;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -69,8 +71,18 @@ class CheckoutServiceIT {
     @MockitoBean
     private InventoryClient inventoryClient;
 
+    @MockitoBean
+    private PaymentClient paymentClient;
+
+    @Autowired
+    private OrderSaga orderSaga;
+
     @BeforeEach
     void stubCatalog() {
+        when(paymentClient.create(any())).thenAnswer(invocation -> {
+            PaymentClient.CreatePayment request = invocation.getArgument(0);
+            return new PaymentClient.Payment(request.orderId(), "PAYREF", "PENDING", "http://pay/" + request.orderId(), request.amount(), request.currency(), request.expiresAt());
+        });
         when(catalogClient.getTicketType(VIP)).thenReturn(ticketType(VIP, "2500000", null, null));
         when(catalogClient.getTicketType(STANDARD)).thenReturn(ticketType(STANDARD, "800000", null, null));
         when(inventoryClient.reserve(any())).thenAnswer(invocation -> {
@@ -91,7 +103,8 @@ class CheckoutServiceIT {
 
         assertThat(result.replayed()).isFalse();
         OrderSummary order = result.order();
-        assertThat(order.status()).isEqualTo(OrderStatus.RESERVED);
+        assertThat(order.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+        assertThat(order.paymentUrl()).isEqualTo("http://pay/" + orderOf(order).getId());
         assertThat(order.expiresAt()).isEqualTo(HOLD_EXPIRES);
         assertThat(order.currency()).isEqualTo("VND");
         assertThat(order.totalAmount()).isEqualByComparingTo("8300000");
@@ -204,9 +217,9 @@ class CheckoutServiceIT {
         OrderSummary reserved = checkoutService.checkout(ALICE, key(), request(item(VIP, 1))).order();
         OrderSummary cancelled = checkoutService.cancel(ALICE, checkoutService.checkout(ALICE, key(), request(item(VIP, 1))).order().code());
 
-        checkoutService.expire(orderOf(reserved).getId());
-        checkoutService.expire(orderOf(reserved).getId());
-        checkoutService.expire(orderOf(cancelled).getId());
+        orderSaga.onHoldExpired(orderOf(reserved).getId(), java.util.UUID.randomUUID());
+        orderSaga.onHoldExpired(orderOf(reserved).getId(), java.util.UUID.randomUUID());
+        orderSaga.onHoldExpired(orderOf(cancelled).getId(), java.util.UUID.randomUUID());
 
         assertThat(orderOf(reserved).getStatus()).isEqualTo(OrderStatus.EXPIRED);
         assertThat(orderOf(cancelled).getStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -226,7 +239,7 @@ class CheckoutServiceIT {
     @Test
     void expiredOrderCannotBeCancelled() {
         OrderSummary order = checkoutService.checkout(ALICE, key(), request(item(VIP, 1))).order();
-        checkoutService.expire(orderOf(order).getId());
+        orderSaga.onHoldExpired(orderOf(order).getId(), java.util.UUID.randomUUID());
 
         assertThatThrownBy(() -> checkoutService.cancel(ALICE, order.code())).isInstanceOf(OrderStateException.class);
         verify(inventoryClient, never()).release(anyLong());

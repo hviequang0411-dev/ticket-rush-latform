@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ticketrush.order.IntegrationTest;
 import com.ticketrush.order.client.CatalogClient;
 import com.ticketrush.order.client.InventoryClient;
+import com.ticketrush.order.client.PaymentClient;
 import com.ticketrush.order.repository.OrderItemRepository;
 import com.ticketrush.order.repository.OrderRepository;
 import java.math.BigDecimal;
@@ -51,8 +52,15 @@ class CheckoutResourceIT {
     @MockitoBean
     private InventoryClient inventoryClient;
 
+    @MockitoBean
+    private PaymentClient paymentClient;
+
     @BeforeEach
     void stubDependencies() {
+        when(paymentClient.create(any())).thenAnswer(invocation -> {
+            PaymentClient.CreatePayment request = invocation.getArgument(0);
+            return new PaymentClient.Payment(request.orderId(), "PAYREF", "PENDING", "http://pay/" + request.orderId(), request.amount(), request.currency(), request.expiresAt());
+        });
         when(catalogClient.getTicketType(11L)).thenReturn(
             new CatalogClient.TicketType(11L, "VIP", new BigDecimal("2500000"), "VND", null, null, new CatalogClient.EventRef(1L))
         );
@@ -74,7 +82,8 @@ class CheckoutResourceIT {
                 .perform(post("/api/checkout").header("Idempotency-Key", "key-0001-abcd").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
-                .andExpect(jsonPath("$.status").value("RESERVED"))
+                .andExpect(jsonPath("$.status").value("AWAITING_PAYMENT"))
+                .andExpect(jsonPath("$.paymentUrl").isNotEmpty())
                 .andExpect(jsonPath("$.totalAmount").value(5000000))
                 .andReturn()
                 .getResponse()

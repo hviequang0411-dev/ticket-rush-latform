@@ -76,6 +76,9 @@ public class Order implements Serializable {
     @Column(name = "version", nullable = false)
     private Long version;
 
+    @Column(name = "payment_url", length = 2000)
+    private String paymentUrl;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "order")
     @JsonIgnoreProperties(value = { "order" }, allowSetters = true)
     private Set<OrderItem> itemses = new HashSet<>();
@@ -253,6 +256,15 @@ public class Order implements Serializable {
     public Order removeItems(OrderItem orderItem) {
         this.itemses.remove(orderItem);
         orderItem.setOrder(null);
+        return this;
+    }
+
+    public String getPaymentUrl() {
+        return this.paymentUrl;
+    }
+
+    public Order paymentUrl(String paymentUrl) {
+        this.paymentUrl = paymentUrl;
         return this;
     }
 

@@ -8,6 +8,7 @@ generating so that:
 - single-node Kafka can create its internal topics (without them no consumer group ever works)
 - services only discover healthy instances, so a restarted service is not called at its old address
 - the gateway has its own Redis for rate limiting
+- Kafka topics exist (3 partitions) before the services that use them start
 
     python scripts/harden-compose.py
 
@@ -24,6 +25,29 @@ REALM = ROOT / "realm-config" / "jhipster-realm.json"
 CENTRAL = ROOT / "central-server-config" / "application.yml"
 
 JWT_ENV = "      - JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET=${JHIPSTER_JWT_BASE64_SECRET:?}"
+
+
+KAFKA_TOPICS = ("catalog.ticket-type.v1", "inventory.hold-expired.v1", "payment.result.v1", "order.events.v1")
+
+KAFKA_APPS = ("catalog", "inventory", "order", "payment")
+
+KAFKA_INIT = (
+    """  kafka-init:
+    # apache/kafka (not -native) ships the CLI tools
+    image: apache/kafka:4.3.1
+    depends_on:
+      - kafka
+    entrypoint: ['/bin/bash', '-c']
+    command:
+      - |
+        until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done
+        for topic in """
+    + " ".join(KAFKA_TOPICS)
+    + """; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1
+        done
+"""
+)
 
 
 def harden_compose(text: str) -> str:
@@ -97,8 +121,20 @@ def harden_compose(text: str) -> str:
             "      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1\n",
         )
 
+    # Create the topics up front with 3 partitions: services no longer race topic auto-creation on a fresh broker
+    # (their consumer bindings failed and retried after 30 s), and keys by aggregate actually spread the load
+    if "  kafka-init:\n" not in text and "  kafka:\n" in text:
+        text = re.sub(r"^  kafka:\n", KAFKA_INIT + "  kafka:\n", text, count=1, flags=re.M)
+        for app in KAFKA_APPS:
+            text = text.replace(
+                f"    depends_on:\n      {app}-postgresql:\n        condition: service_healthy\n",
+                f"    depends_on:\n      {app}-postgresql:\n        condition: service_healthy\n"
+                "      kafka-init:\n        condition: service_completed_successfully\n",
+                1,
+            )
+
     # Keycloak dev mode rebuilds Quarkus on boot (~1-2 min); don't count that as failures
-    kc_health = '      test: "bash /opt/keycloak/health-check.sh"\n      interval: 5s\n      timeout: 5s\n      retries: 20\n'
+    kc_health ='      test: "bash /opt/keycloak/health-check.sh"\n      interval: 5s\n      timeout: 5s\n      retries: 20\n'
     if kc_health in text and "start_period" not in text.split("keycloak:")[-1]:
         text = text.replace(
             kc_health,
@@ -174,9 +210,22 @@ spring:
 """
 
 
+METRICS = """
+management:
+  metrics:
+    distribution:
+      # Histograms so Grafana can compute p95/p99 across instances (histogram_quantile)
+      percentiles-histogram:
+        http.server.requests: true
+        ticketrush.checkout: true
+"""
+
+
 def harden_central(text: str) -> str:
     if "query-passing" not in text:
         text = text.rstrip("\n") + "\n" + CONSUL_DISCOVERY
+    if "percentiles-histogram" not in text:
+        text = text.rstrip("\n") + "\n" + METRICS
     return re.sub(
         r"\njhipster:\n  security:\n    authentication:\n      jwt:\n        base64-secret: \S+\n",
         "\n# jhipster.security.authentication.jwt.base64-secret is injected per service via the\n"

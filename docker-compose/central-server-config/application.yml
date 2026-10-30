@@ -15,3 +15,11 @@ spring:
         query-passing: true
         # Remove registrations of instances that died without deregistering
         health-check-critical-timeout: 1m
+
+management:
+  metrics:
+    distribution:
+      # Histograms so Grafana can compute p95/p99 across instances (histogram_quantile)
+      percentiles-histogram:
+        http.server.requests: true
+        ticketrush.checkout: true

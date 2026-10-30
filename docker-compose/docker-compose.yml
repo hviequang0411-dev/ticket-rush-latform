@@ -75,6 +75,8 @@ services:
     depends_on:
       catalog-postgresql:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_healthy
   catalog-postgresql:
@@ -119,6 +121,8 @@ services:
     depends_on:
       inventory-postgresql:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_healthy
   inventory-postgresql:
@@ -161,6 +165,8 @@ services:
     depends_on:
       order-postgresql:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_healthy
   order-postgresql:
@@ -203,6 +209,8 @@ services:
     depends_on:
       payment-postgresql:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_healthy
   payment-postgresql:
@@ -218,6 +226,18 @@ services:
       timeout: 5s
       retries: 10
 
+  kafka-init:
+    # apache/kafka (not -native) ships the CLI tools
+    image: apache/kafka:4.3.1
+    depends_on:
+      - kafka
+    entrypoint: ['/bin/bash', '-c']
+    command:
+      - |
+        until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done
+        for topic in catalog.ticket-type.v1 inventory.hold-expired.v1 payment.result.v1 order.events.v1; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic $$topic --partitions 3 --replication-factor 1
+        done
   kafka:
     image: apache/kafka-native:4.3.1
     environment:

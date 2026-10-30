@@ -4,12 +4,7 @@
       "home": {
         "title": "Order Items",
         "refreshListLabel": "Refresh list",
-        "createLabel": "Create a new Order Item",
-        "createOrEditLabel": "Create or edit a Order Item",
         "notFound": "No Order Items found"
-      },
-      "delete": {
-        "question": "Are you sure you want to delete Order Item {{ id }}?"
       },
       "detail": {
         "title": "Order Item"
@@ -20,13 +15,6 @@
       "quantity": "Quantity",
       "unitPrice": "Unit Price",
       "order": "Order"
-    }
-  },
-  "orderApp": {
-    "orderOrderItem": {
-      "created": "A new Order Item is created with identifier {{ param }}",
-      "updated": "A Order Item is updated with identifier {{ param }}",
-      "deleted": "A Order Item is deleted with identifier {{ param }}"
     }
   }
 }

@@ -14,6 +14,10 @@
       "order": {
         "applicationIndex": 3,
         "serverPort": "8083"
+      },
+      "payment": {
+        "applicationIndex": 4,
+        "serverPort": "8084"
       }
     },
     "authenticationType": "oauth2",
@@ -24,7 +28,7 @@
     "databaseType": "sql",
     "devDatabaseType": "postgresql",
     "devServerPort": null,
-    "entities": ["Venue", "TicketStock", "Event", "Order", "TicketType", "OrderItem"],
+    "entities": ["Venue", "TicketStock", "Payment", "Event", "Order", "TicketType", "OrderItem"],
     "jhipsterVersion": "9.4.0",
     "jwtSecretKey": "NDU0NmRjZWQ4N2I3ZTlmYjVjMDhkYTY3ZjczNjdkYmMzN2NlYTQ3Njk1OGJlNGIyNGEzOGRjM2NmMmM3MDI5YjUyZmM5Zjg2NWQ4M2U4NGUzNDcwMTg5NTg4YjU5ODJkMWNlMjA3NjRjZDA0MzdkZDE3YWE4Y2VmYzA1MGMyNjQ=",
     "languages": ["en", "vi"],

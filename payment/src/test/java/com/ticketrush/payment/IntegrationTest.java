@@ -1,0 +1,26 @@
+package com.ticketrush.payment;
+
+import com.ticketrush.payment.config.AsyncSyncConfiguration;
+import com.ticketrush.payment.config.DatabaseTestcontainer;
+import com.ticketrush.payment.config.TestSecurityConfiguration;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.boot.test.context.SpringBootTest;
+
+/**
+ * Base composite annotation for integration tests.
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@SpringBootTest(
+    classes = {
+        PaymentApp.class,
+        AsyncSyncConfiguration.class,
+        TestSecurityConfiguration.class,
+        com.ticketrush.payment.config.JacksonHibernateConfiguration.class,
+        DatabaseTestcontainer.class,
+    }
+)
+public @interface IntegrationTest {}

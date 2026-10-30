@@ -1,0 +1,32 @@
+{
+  "generator-jhipster": {
+    "applicationIndex": 4,
+    "applicationType": "microservice",
+    "authenticationType": "oauth2",
+    "baseName": "payment",
+    "buildTool": "maven",
+    "cacheProvider": "no",
+    "creationTimestamp": 1793332893973,
+    "databaseType": "sql",
+    "defaultCommand": "app",
+    "devDatabaseType": "postgresql",
+    "enableHibernateCache": false,
+    "entities": ["Payment", "PaymentWebhookEvent"],
+    "gatewayServerPort": "8080",
+    "jhipsterVersion": "9.4.0",
+    "jwtSecretKey": "ZTdmNjMxZmYyMjk2Mjc1YmFlZmJmOTc1YjdhMzIyZGRjZmZkZTBmYWYzNDY0NjY4NWExZmMxNWMyMDE5ZWYzYmZlMzExY2JiMmE5NDNlZmUwYTgwNTA3ZGM5NWU2ZmVkZmYyZTI0Y2U1NTZkYTgwMTRhNmIzMTYxNDRiNGVlNWU=",
+    "languages": ["en", "vi"],
+    "lastLiquibaseTimestamp": 1793332990000,
+    "messageBroker": "kafka",
+    "nativeLanguage": "en",
+    "packageName": "com.ticketrush.payment",
+    "prodDatabaseType": "postgresql",
+    "promptValues": {
+      "nativeLanguage": "en"
+    },
+    "reactive": false,
+    "serverPort": "8084",
+    "serviceDiscoveryType": "consul",
+    "skipClient": true
+  }
+}

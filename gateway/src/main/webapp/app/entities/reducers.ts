@@ -4,9 +4,11 @@ import venue from 'app/entities/catalog/venue/venue.reducer';
 import ticketStock from 'app/entities/inventory/ticket-stock/ticket-stock.reducer';
 import order from 'app/entities/order/order/order.reducer';
 import orderItem from 'app/entities/order/order-item/order-item.reducer';
+import payment from 'app/entities/payment/payment/payment.reducer';
 /* jhipster-needle-add-reducer-import - JHipster will add reducer here */
 
 const entitiesReducers = {
+  payment,
   venue,
   ticketStock,
   event,

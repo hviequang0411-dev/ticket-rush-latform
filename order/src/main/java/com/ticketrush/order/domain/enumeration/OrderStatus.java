@@ -11,4 +11,5 @@ public enum OrderStatus {
     CANCELLED,
     EXPIRED,
     FAILED,
+    REFUNDED,
 }

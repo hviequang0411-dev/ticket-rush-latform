@@ -8,7 +8,8 @@
       "CONFIRMED": "CONFIRMED",
       "CANCELLED": "CANCELLED",
       "EXPIRED": "EXPIRED",
-      "FAILED": "FAILED"
+      "FAILED": "FAILED",
+      "REFUNDED": "REFUNDED"
     }
   }
 }

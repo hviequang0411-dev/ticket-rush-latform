@@ -1,0 +1,10 @@
+{
+  "gatewayApp": {
+    "PaymentProvider": {
+      "null": "",
+      "MOCK": "MOCK",
+      "VNPAY": "VNPAY",
+      "MOMO": "MOMO"
+    }
+  }
+}

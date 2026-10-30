@@ -20,6 +20,8 @@ Launch all your infrastructure by running: `docker compose up -d`.
 - inventory's postgresql database
 - order (microservice application)
 - order's postgresql database
+- payment (microservice application)
+- payment's postgresql database
 
 ### Additional Services:
 

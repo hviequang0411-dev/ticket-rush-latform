@@ -12,4 +12,6 @@ export enum OrderStatus {
   EXPIRED = 'EXPIRED',
 
   FAILED = 'FAILED',
+
+  REFUNDED = 'REFUNDED',
 }

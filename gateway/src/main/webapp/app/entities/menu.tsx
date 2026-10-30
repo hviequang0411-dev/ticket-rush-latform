@@ -37,6 +37,11 @@ const EntitiesMenu = () => {
           <Translate contentKey="global.menu.entities.orderOrderItem" />
         </MenuItem>
       )}
+      {isAdmin && (
+        <MenuItem icon="asterisk" to="/payment">
+          <Translate contentKey="global.menu.entities.paymentPayment" />
+        </MenuItem>
+      )}
       {/* jhipster-needle-add-entity-to-menu - JHipster will add entities to the menu here */}
     </>
   );

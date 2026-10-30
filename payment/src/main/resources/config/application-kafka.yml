@@ -1,0 +1,12 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          replicationFactor: 1
+          auto-create-topics: true
+          brokers: localhost:9092
+        default:
+          producer:
+            # The outbox relay marks an event published only after Kafka acknowledged it
+            sync: true

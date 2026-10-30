@@ -7,6 +7,7 @@
       "entities": {
         "main": "Entities",
         "jhipster-needle-menu-add-entry": "JHipster will add additional entities here (do not translate!)",
+        "paymentPayment": "Payment",
         "catalogVenue": "Venue",
         "inventoryTicketStock": "Ticket Stock",
         "catalogEvent": "Event",

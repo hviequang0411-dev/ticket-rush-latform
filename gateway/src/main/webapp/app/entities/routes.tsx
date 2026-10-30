@@ -16,6 +16,7 @@ import Venue from './catalog/venue';
 import TicketStock from './inventory/ticket-stock';
 import Order from './order/order';
 import OrderItem from './order/order-item';
+import Payment from './payment/payment';
 import entitiesReducers from './reducers';
 /* jhipster-needle-add-route-import - JHipster will add routes here */
 
@@ -51,6 +52,14 @@ export default () => {
           element={
             <PrivateRoute hasAnyAuthorities={[Authority.ADMIN]}>
               <OrderItem />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/payment/*"
+          element={
+            <PrivateRoute hasAnyAuthorities={[Authority.ADMIN]}>
+              <Payment />
             </PrivateRoute>
           }
         />

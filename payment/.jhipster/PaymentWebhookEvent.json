@@ -1,0 +1,60 @@
+{
+  "annotations": {
+    "changelogDate": "20261030040310",
+    "readOnly": true
+  },
+  "applications": ["payment"],
+  "clientRootFolder": "payment",
+  "databaseType": "sql",
+  "documentation": "Every provider callback as received; (provider, eventKey) is unique, so a redelivered webhook is a no-op.",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "id",
+      "fieldType": "Long"
+    },
+    {
+      "fieldName": "provider",
+      "fieldType": "PaymentProvider",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "MOCK,VNPAY,MOMO"
+    },
+    {
+      "fieldName": "eventKey",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "maxlength"],
+      "fieldValidateRulesMaxlength": "128"
+    },
+    {
+      "fieldName": "payload",
+      "fieldType": "TextBlob",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "signatureValid",
+      "fieldType": "Boolean",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "receivedAt",
+      "fieldType": "Instant",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "processedAt",
+      "fieldType": "Instant"
+    }
+  ],
+  "microserviceName": "payment",
+  "name": "PaymentWebhookEvent",
+  "relationships": [
+    {
+      "otherEntityName": "payment",
+      "relationshipName": "payment",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceImpl"
+}

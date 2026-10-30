@@ -1,0 +1,28 @@
+{
+  "gatewayApp": {
+    "paymentPayment": {
+      "home": {
+        "title": "Payments",
+        "refreshListLabel": "Refresh list",
+        "notFound": "No Payments found"
+      },
+      "detail": {
+        "title": "Payment"
+      },
+      "id": "Id",
+      "orderId": "Order Id",
+      "orderCode": "Order Code",
+      "amount": "Amount",
+      "currency": "Currency",
+      "provider": "Provider",
+      "status": "Status",
+      "providerRef": "Provider Ref",
+      "providerTransactionId": "Provider Transaction Id",
+      "paymentUrl": "Payment Url",
+      "failureReason": "Failure Reason",
+      "expiresAt": "Expires At",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    }
+  }
+}

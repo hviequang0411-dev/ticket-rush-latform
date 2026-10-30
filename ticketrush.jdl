@@ -1,5 +1,5 @@
 /*
- * TicketRush - Phase 2: gateway, catalog, inventory, order
+ * TicketRush - Phase 3: gateway, catalog, inventory, order, payment
  * Target: generator-jhipster 9.4.0 (Spring Boot 4.1.1, Spring Cloud 2025.1.3, Java 21)
  *
  * Notes:
@@ -30,7 +30,7 @@ application {
     languages [en, vi]
     testFrameworks []
   }
-  entities Venue, Event, TicketType, TicketStock, Order, OrderItem
+  entities Venue, Event, TicketType, TicketStock, Order, OrderItem, Payment
 }
 
 application {
@@ -99,6 +99,29 @@ application {
     languages [en, vi]
   }
   entities Order, OrderItem
+}
+
+application {
+  config {
+    baseName payment
+    applicationType microservice
+    skipClient true
+    packageName com.ticketrush.payment
+    serverPort 8084
+    reactive false
+    authenticationType oauth2
+    serviceDiscoveryType consul
+    databaseType sql
+    devDatabaseType postgresql
+    prodDatabaseType postgresql
+    cacheProvider no
+    enableHibernateCache false
+    messageBroker kafka
+    buildTool maven
+    nativeLanguage en
+    languages [en, vi]
+  }
+  entities Payment, PaymentWebhookEvent
 }
 
 enum EventStatus {
@@ -187,7 +210,8 @@ enum OrderStatus {
   CONFIRMED,
   CANCELLED,
   EXPIRED,
-  FAILED
+  FAILED,
+  REFUNDED
 }
 
 /** Created only through checkout; the admin API is read-only. */
@@ -219,17 +243,69 @@ relationship OneToMany {
   Order{items} to OrderItem{order required}
 }
 
+// ---------- payment ----------
+
+enum PaymentProvider {
+  MOCK,
+  VNPAY,
+  MOMO
+}
+
+enum PaymentStatus {
+  PENDING,
+  SUCCEEDED,
+  FAILED,
+  EXPIRED,
+  REFUNDED
+}
+
+/** One payment attempt for an order. Created by the order saga; the admin API is read-only. */
+@readOnly
+entity Payment {
+  id Long
+  orderId Long required
+  orderCode String required maxlength(32)
+  amount BigDecimal required min(0)
+  currency String required minlength(3) maxlength(3)
+  provider PaymentProvider required
+  status PaymentStatus required
+  providerRef String required unique maxlength(64)
+  providerTransactionId String maxlength(64)
+  paymentUrl String maxlength(2000)
+  failureReason String maxlength(255)
+  expiresAt Instant required
+  createdAt Instant required
+  updatedAt Instant
+}
+
+/** Every provider callback as received; (provider, eventKey) is unique, so a redelivered webhook is a no-op. */
+@readOnly
+entity PaymentWebhookEvent {
+  id Long
+  provider PaymentProvider required
+  eventKey String required maxlength(128)
+  payload TextBlob required
+  signatureValid Boolean required
+  receivedAt Instant required
+  processedAt Instant
+}
+
+relationship ManyToOne {
+  PaymentWebhookEvent{payment} to Payment
+}
+
 service * with serviceImpl
 dto * with mapstruct
-paginate Venue, Event, TicketStock, Order with pagination
+paginate Venue, Event, TicketStock, Order, Payment with pagination
 filter Event, Order
 microservice Venue, Event, TicketType with catalog
 microservice TicketStock, StockHold with inventory
 microservice Order, OrderItem with order
+microservice Payment, PaymentWebhookEvent with payment
 
 deployment {
   deploymentType docker-compose
-  appsFolders [gateway, catalog, inventory, order]
+  appsFolders [gateway, catalog, inventory, order, payment]
   serviceDiscoveryType consul
   monitoring no
 }

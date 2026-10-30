@@ -83,6 +83,10 @@ public class Payment implements Serializable {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
     public Long getId() {
@@ -265,6 +269,14 @@ public class Payment implements Serializable {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getVersion() {
+        return this.version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.ticketrush.payment.IntegrationTest;
+import com.ticketrush.payment.security.AuthoritiesConstants;
 import com.ticketrush.payment.domain.Payment;
 import com.ticketrush.payment.domain.enumeration.PaymentProvider;
 import com.ticketrush.payment.domain.enumeration.PaymentStatus;
@@ -32,7 +33,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = AuthoritiesConstants.ADMIN)
 class PaymentResourceIT {
 
     private static final Long DEFAULT_ORDER_ID = 1L;

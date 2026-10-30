@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- A provider retrying a webhook sends the same event: store it once -->
+    <changeSet id="20261030100000-1" author="ticketrush">
+        <addUniqueConstraint tableName="payment_webhook_event" columnNames="provider, event_key"
+                             constraintName="ux_payment_webhook_event__provider__event_key"/>
+    </changeSet>
+
+    <!-- At most one open payment attempt per order, whatever races the saga gets into -->
+    <changeSet id="20261030100000-2" author="ticketrush">
+        <sql>CREATE UNIQUE INDEX ux_payment__order_id__pending ON payment (order_id) WHERE status = 'PENDING'</sql>
+    </changeSet>
+
+    <!-- Expiry scan: WHERE status = 'PENDING' AND expires_at < now -->
+    <changeSet id="20261030100000-3" author="ticketrush">
+        <createIndex tableName="payment" indexName="ix_payment__status__expires_at">
+            <column name="status"/>
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20261030100000-4" author="ticketrush">
+        <addColumn tableName="payment">
+            <column name="version" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

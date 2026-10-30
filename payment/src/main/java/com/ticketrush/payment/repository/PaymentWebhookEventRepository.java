@@ -1,6 +1,8 @@
 package com.ticketrush.payment.repository;
 
 import com.ticketrush.payment.domain.PaymentWebhookEvent;
+import com.ticketrush.payment.domain.enumeration.PaymentProvider;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.stereotype.Repository;
 
@@ -9,4 +11,6 @@ import org.springframework.stereotype.Repository;
  */
 @SuppressWarnings("unused")
 @Repository
-public interface PaymentWebhookEventRepository extends JpaRepository<PaymentWebhookEvent, Long> {}
+public interface PaymentWebhookEventRepository extends JpaRepository<PaymentWebhookEvent, Long> {
+    Optional<PaymentWebhookEvent> findByProviderAndEventKey(PaymentProvider provider, String eventKey);
+}

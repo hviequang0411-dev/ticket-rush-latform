@@ -44,6 +44,10 @@ public class SecurityConfiguration {
                     .requestMatchers("/api/authenticate").permitAll()
                     .requestMatchers("/api/auth-info").permitAll()
                     .requestMatchers("/api/admin/**").hasAuthority(AuthoritiesConstants.ADMIN)
+                    // Provider callbacks and the mock provider's page: no token, trust comes from signatures
+                    .requestMatchers("/api/public/**").permitAll()
+                    .requestMatchers("/api/internal/**").hasAuthority(AuthoritiesConstants.SERVICE)
+                    .requestMatchers("/api/payments/**", "/api/payment-webhook-events/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers("/api/**").authenticated()
                     .requestMatchers("/v3/api-docs/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .requestMatchers("/management/health").permitAll()

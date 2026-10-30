@@ -48,9 +48,12 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.authentication.HttpStatusServerEntryPoint;
 import org.springframework.security.web.server.authentication.RedirectServerAuthenticationEntryPoint;
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
+import org.springframework.security.web.server.csrf.CsrfWebFilter;
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter;
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode;
+import org.springframework.security.web.server.util.matcher.AndServerWebExchangeMatcher;
+import org.springframework.security.web.server.util.matcher.NegatedServerWebExchangeMatcher;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -60,6 +63,8 @@ import tech.jhipster.web.filter.reactive.CookieCsrfFilter;
 @Configuration
 @EnableReactiveMethodSecurity
 public class SecurityConfiguration {
+
+    static final String PAYMENT_PUBLIC_PATH = "/services/payment/api/public/**";
 
     private final JHipsterProperties jHipsterProperties;
 
@@ -89,6 +94,13 @@ public class SecurityConfiguration {
                     .csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
                     // See https://stackoverflow.com/q/74447118/65681
                     .csrfTokenRequestHandler(new ServerCsrfTokenRequestAttributeHandler())
+                    // Payment provider callbacks and the mock provider's page never carry our CSRF cookie
+                    .requireCsrfProtectionMatcher(
+                        new AndServerWebExchangeMatcher(
+                            CsrfWebFilter.DEFAULT_CSRF_MATCHER,
+                            new NegatedServerWebExchangeMatcher(pathMatchers(PAYMENT_PUBLIC_PATH))
+                        )
+                    )
             )
             // See https://github.com/spring-projects/spring-security/issues/5766
             .addFilterAt(new CookieCsrfFilter(), SecurityWebFiltersOrder.REACTOR_CONTEXT)
@@ -121,6 +133,8 @@ public class SecurityConfiguration {
                     .pathMatchers("/api/**").authenticated()
                     .pathMatchers("/services/*/management/health/readiness").permitAll()
                     .pathMatchers("/services/*/v3/api-docs").hasAuthority(AuthoritiesConstants.ADMIN)
+                    // Signed by the provider instead of authenticated (see payment's PaymentWebhookResource)
+                    .pathMatchers(PAYMENT_PUBLIC_PATH).permitAll()
                     .pathMatchers("/services/**").authenticated()
                     .pathMatchers("/v3/api-docs/**").hasAuthority(AuthoritiesConstants.ADMIN)
                     .pathMatchers("/management/health").permitAll()

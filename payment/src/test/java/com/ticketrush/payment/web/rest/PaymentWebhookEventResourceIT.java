@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.ticketrush.payment.IntegrationTest;
+import com.ticketrush.payment.security.AuthoritiesConstants;
 import com.ticketrush.payment.domain.PaymentWebhookEvent;
 import com.ticketrush.payment.domain.enumeration.PaymentProvider;
 import com.ticketrush.payment.repository.PaymentWebhookEventRepository;
@@ -29,7 +30,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @IntegrationTest
 @AutoConfigureMockMvc
-@WithMockUser
+@WithMockUser(authorities = AuthoritiesConstants.ADMIN)
 class PaymentWebhookEventResourceIT {
 
     private static final PaymentProvider DEFAULT_PROVIDER = PaymentProvider.MOCK;

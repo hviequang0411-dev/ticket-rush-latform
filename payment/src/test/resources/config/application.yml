@@ -96,3 +96,11 @@ management:
   health:
     mail:
       enabled: false
+
+ticketrush:
+  outbox:
+    # Tests relay explicitly through OutboxRelay.relayBatch() instead of the scheduler
+    relay-enabled: false
+  payment:
+    # Tests drive expiry themselves through PaymentFlowService
+    expiry-job-enabled: false

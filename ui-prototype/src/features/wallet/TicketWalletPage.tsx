@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Wallet, Maximize2, X, Calendar, MapPin } from 'lucide-react';
 import { ApiService } from '../../api/apiClient';
 import type { TicketPass } from '../../types/models';
-import { EmptyState, ErrorState, DemoBanner } from '../../components/DataStates';
+import { EmptyState, ErrorState } from '../../components/DataStates';
 
 export const TicketWalletPage: React.FC = () => {
   const [passes, setPasses] = useState<TicketPass[]>([]);
@@ -37,7 +37,6 @@ export const TicketWalletPage: React.FC = () => {
 
   return (
     <div className="tr-container py-4">
-      <DemoBanner>vé lấy từ đơn đã thanh toán; mã QR chỉ minh hoạ, chưa có dịch vụ soát vé.</DemoBanner>
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
           <h1 className="fs-3 fw-bold mb-1">Ví vé điện tử của bạn</h1>

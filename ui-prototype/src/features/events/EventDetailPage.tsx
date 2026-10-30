@@ -73,7 +73,12 @@ export const EventDetailPage: React.FC = () => {
       ticketTypeId: Number(idStr),
       quantity: q
     }));
-    // Pass items in state
+    if (event.waitingRoom && !ApiService.queuePass(event.id)) {
+      // Hot sale: queue first; checkout picks the selection up from session storage once admitted
+      sessionStorage.setItem('ticketrush.checkout', JSON.stringify({ eventId: event.id, items }));
+      navigate(`/queue?event=${event.id}&slug=${encodeURIComponent(event.slug)}`);
+      return;
+    }
     navigate('/checkout', {
       state: {
         eventId: event.id,

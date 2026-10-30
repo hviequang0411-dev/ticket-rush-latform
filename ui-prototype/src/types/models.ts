@@ -40,16 +40,9 @@ export interface Event {
   };
   venue: Venue;
   isHot?: boolean;
+  /** Buyers queue in the waiting room and need an admission pass to check out. */
+  waitingRoom?: boolean;
   ticketTypes: TicketType[];
-}
-
-export interface TicketStock {
-  ticketTypeId: number;
-  eventId: number;
-  totalQuantity: number;
-  availableQuantity: number;
-  reservedQuantity: number;
-  soldQuantity: number;
 }
 
 export interface OrderItem {
@@ -84,20 +77,6 @@ export interface OrderSummary {
   items: OrderItem[];
 }
 
-export interface Payment {
-  id: number;
-  orderId: number;
-  provider: PaymentProvider;
-  providerRef: string;
-  status: PaymentStatus;
-  paymentUrl: string;
-  amount: number;
-  currency: 'VND';
-  createdAt: string;
-  expiresAt: string;
-  failureReason?: string;
-}
-
 export interface ApiErrorProblem {
   status: number;
   title: string;
@@ -119,17 +98,6 @@ export interface TicketPass {
   customerName: string;
   status: 'VALID' | 'USED' | 'CANCELLED';
   checkInAt?: string;
-}
-
-export interface WebhookLog {
-  id: string;
-  timestamp: string;
-  provider: PaymentProvider;
-  providerRef: string;
-  orderCode: string;
-  amount: number;
-  signatureValid: boolean;
-  processed: boolean;
-  payload: string;
+  eventId: number;
 }
 

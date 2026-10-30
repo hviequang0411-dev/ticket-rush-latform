@@ -70,6 +70,11 @@ export const CheckoutPage: React.FC = () => {
         window.location.assign(`/order-result?orderCode=${encodeURIComponent(order.code)}`);
       }
     } catch (err: unknown) {
+      if ((err as ApiErrorProblem).status === 428) {
+        // The waiting room opened (or the pass expired) after the buyer picked seats: queue, then come back here
+        window.location.assign(`/queue?event=${event.id}&slug=${encodeURIComponent(event.slug)}`);
+        return;
+      }
       setApiError(err as ApiErrorProblem);
       setSubmitting(false);
     }

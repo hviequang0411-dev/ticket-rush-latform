@@ -1,9 +1,24 @@
 import React from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { LayoutDashboard, Calendar, Layers, ShoppingBag, CreditCard, QrCode, ArrowLeft, Ticket } from 'lucide-react';
-import { DemoBanner } from './DataStates';
+import { displayName, isAdmin, signIn, useAccount } from '../api/auth';
+import { ForbiddenPage } from '../features/system/SystemPages';
 
 export const AdminLayout: React.FC = () => {
+  const { account, loading } = useAccount();
+
+  // The APIs refuse non-admins anyway; this just avoids showing a screen full of errors
+  if (loading) {
+    return <div className="tr-container py-5"><div className="tr-skeleton w-100 rounded-3" style={{ height: 300 }} /></div>;
+  }
+  if (!account) {
+    signIn();
+    return null;
+  }
+  if (!isAdmin(account)) {
+    return <ForbiddenPage />;
+  }
+
   return (
     <div className="d-flex min-vh-100 bg-app">
       {/* Sidebar */}
@@ -111,12 +126,11 @@ export const AdminLayout: React.FC = () => {
           <div className="d-flex align-items-center gap-3">
             <span className="small text-muted">Múi giờ: <strong>Asia/Ho_Chi_Minh</strong></span>
             <div className="vr" />
-            <span className="small fw-semibold text-main">Tài khoản: Organizer Admin</span>
+            <span className="small fw-semibold text-main">Tài khoản: {displayName(account)}</span>
           </div>
         </header>
 
         <main className="p-4 flex-grow-1 overflow-auto" id="admin-main">
-          <DemoBanner>khu quản trị dùng dữ liệu mẫu; quản lý thật nằm ở trang JHipster admin.</DemoBanner>
           <Outlet />
         </main>
       </div>

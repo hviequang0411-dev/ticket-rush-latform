@@ -9,6 +9,7 @@ const MESSAGES: Record<number, { title: string; message: string }> = {
   403: { title: 'Không có quyền truy cập', message: 'Tài khoản của bạn không được phép thực hiện thao tác này.' },
   404: { title: 'Không tìm thấy', message: 'Nội dung không tồn tại hoặc đã bị gỡ.' },
   409: { title: 'Hết vé hoặc xung đột', message: 'Vé đã hết hoặc vừa có thay đổi từ hệ thống.' },
+  428: { title: 'Cần xếp hàng', message: 'Sự kiện này mở bán qua phòng chờ. Vui lòng vào hàng đợi trước khi thanh toán.' },
   429: { title: 'Thao tác quá nhanh', message: 'Vui lòng chờ ít giây trước khi thử lại.' },
   503: { title: 'Hệ thống đang bận', message: 'Một dịch vụ tạm thời không phản hồi. Thử lại an toàn, bạn sẽ không bị trừ tiền hai lần.' },
 };

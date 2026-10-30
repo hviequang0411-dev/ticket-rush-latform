@@ -1,13 +1,13 @@
-import { mockPasses, mockWebhooks } from '../mocks/mockData';
-import type { Event, OrderSummary, TicketPass, WebhookLog, ApiErrorProblem, TicketType } from '../types/models';
+import type { Event, OrderSummary, TicketPass, ApiErrorProblem, TicketType } from '../types/models';
 import { displayName, fetchAccount } from './auth';
 import { get, post } from './http';
 
 // The buying flow talks to the real services through the gateway:
 //   catalog   /services/catalog/api/public/events        (anonymous)
 //   inventory /services/inventory/api/public/availability (anonymous)
-//   order     /services/order/api/checkout, my-orders     (signed in)
-// Ticket check-in and the webhook log have no backend yet and stay on mock data (marked "demo" in the UI).
+//   order     /services/order/api/checkout, my-orders, my-tickets (signed in)
+//   gateway   /api/waiting-room/{eventId}                  (signed in)
+// Organiser screens use ./adminApi.
 
 interface PublicEvent {
   id: number;
@@ -18,6 +18,7 @@ interface PublicEvent {
   endTime?: string;
   status: Event['status'];
   posterUrl?: string;
+  waitingRoom?: boolean;
   venue: { id: number; name: string; address: string; city: string; capacity: number };
   ticketTypes: { id: number; name: string; price: number; currency: 'VND'; totalQuantity: number; saleStart?: string; saleEnd?: string }[];
 }
@@ -56,7 +57,7 @@ const CATEGORIES: [RegExp, Event['category']][] = [
 ];
 
 /** The catalog has no category or artwork yet: derive stable ones from the event itself. */
-function toEvent(event: PublicEvent, availability: Map<number, Availability>): Event {
+export function toEvent(event: PublicEvent, availability: Map<number, Availability>): Event {
   const ticketTypes: TicketType[] = event.ticketTypes.map(type => ({
     id: type.id,
     name: type.name,
@@ -83,9 +84,12 @@ function toEvent(event: PublicEvent, availability: Map<number, Availability>): E
     posterBg: POSTERS[event.id % POSTERS.length],
     venue: { ...event.venue },
     isHot: total > 0 && left / total < 0.3,
+    waitingRoom: !!event.waitingRoom,
     ticketTypes,
   } as Event;
 }
+
+export type { PublicEvent, Availability };
 
 async function withAvailability(events: PublicEvent[]): Promise<Event[]> {
   const ids = events.flatMap(event => event.ticketTypes.map(type => type.id));
@@ -176,7 +180,12 @@ export class ApiService {
   static async createOrder(orderPayload: { eventId: number; items: { ticketTypeId: number; quantity: number }[] }): Promise<OrderSummary> {
     const items = orderPayload.items.filter(item => item.quantity > 0);
     const selection = JSON.stringify(items);
-    const order = await post<OrderResponse>('/services/order/api/checkout', { items }, { 'Idempotency-Key': idempotencyKey(selection) });
+    const headers: Record<string, string> = { 'Idempotency-Key': idempotencyKey(selection) };
+    const pass = ApiService.queuePass(orderPayload.eventId);
+    if (pass) {
+      headers['X-Queue-Pass'] = pass;
+    }
+    const order = await post<OrderResponse>('/services/order/api/checkout', { items }, headers);
     forgetIdempotencyKey(selection);
     return toOrder(order);
   }
@@ -194,49 +203,101 @@ export class ApiService {
     return toOrder(await post<OrderResponse>(`/services/order/api/my-orders/${encodeURIComponent(code)}/cancel`));
   }
 
-  /** E-tickets for confirmed orders, one per seat. The QR code is illustrative: check-in has no backend yet. */
+  /** The signed-in user's e-tickets, one per seat; the QR code is signed by the order service. */
   static async getPasses(): Promise<TicketPass[]> {
-    const orders = await ApiService.getOrders();
-    return orders
-      .filter(order => order.status === 'CONFIRMED')
-      .flatMap(order =>
-        order.items.flatMap(item =>
-          Array.from({ length: item.quantity }, (_, seat) => ({
-            id: `${order.code}-${item.ticketTypeId}-${seat + 1}`,
-            orderCode: order.code,
-            eventTitle: order.event.name,
-            eventDate: order.event.startTime,
-            venueName: order.event.venueName,
-            venueAddress: order.event.venueAddress,
-            ticketTypeName: item.ticketTypeName,
-            seatInfo: `Vé ${seat + 1}/${item.quantity}`,
-            qrPayload: `TICKETRUSH::${order.code}::${item.ticketTypeId}::${seat + 1}`,
-            customerName: order.customerName,
-            status: 'VALID' as const,
-          })),
-        ),
-      );
+    const [tickets, account] = await Promise.all([get<TicketView[]>('/services/order/api/my-tickets'), fetchAccount()]);
+    return Promise.all(tickets.map(ticket => toPass(ticket, account ? displayName(account) : ticket.userLogin)));
   }
 
-  // ---- Demo only: no backend yet ----
-
+  /** Gate scan (organisers only). Exactly one scan of a ticket admits it, however many gates scan at once. */
   static async checkInPass(qrPayload: string): Promise<{ success: boolean; pass?: TicketPass; reason?: string }> {
-    const pass = mockPasses.find(p => p.qrPayload === qrPayload || p.id === qrPayload);
-    if (!pass) {
-      return { success: false, reason: 'Mã QR không hợp lệ hoặc không có trong hệ thống.' };
+    const result = await post<{ outcome: 'ADMITTED' | 'ALREADY_USED' | 'CANCELLED' | 'INVALID'; ticket?: TicketView }>(
+      '/services/order/api/admin/check-in',
+      { qrPayload },
+    );
+    const pass = result.ticket ? await toPass(result.ticket, result.ticket.userLogin) : undefined;
+    switch (result.outcome) {
+      case 'ADMITTED':
+        return { success: true, pass };
+      case 'ALREADY_USED':
+        return { success: false, pass, reason: `Vé này đã được quét lúc ${pass?.checkInAt ?? 'trước đó'}.` };
+      case 'CANCELLED':
+        return { success: false, pass, reason: 'Vé này đã bị huỷ cùng đơn hàng.' };
+      default:
+        return { success: false, reason: 'Mã QR không hợp lệ, bị sửa hoặc không do TicketRush phát hành.' };
     }
-    if (pass.status === 'USED') {
-      return { success: false, pass, reason: `Vé này đã được quét lúc ${pass.checkInAt || 'trước đó'}.` };
-    }
-    if (pass.status === 'CANCELLED') {
-      return { success: false, pass, reason: 'Vé này đã bị huỷ do đơn hàng hoàn tiền.' };
-    }
-    pass.status = 'USED';
-    pass.checkInAt = new Date().toLocaleTimeString('vi-VN');
-    return { success: true, pass };
   }
 
-  static async getWebhooks(): Promise<WebhookLog[]> {
-    return [...mockWebhooks];
+  /** Takes (or keeps) a place in the event's waiting room. */
+  static async joinQueue(eventId: number): Promise<QueueStatus> {
+    return rememberPass(await post<QueueStatus>(`/api/waiting-room/${eventId}`));
   }
+
+  static async queueStatus(eventId: number): Promise<QueueStatus> {
+    return rememberPass(await get<QueueStatus>(`/api/waiting-room/${eventId}`));
+  }
+
+  /** A still-valid admission pass for the event, if the buyer has been let in. */
+  static queuePass(eventId: number): string | null {
+    const entry = savedPasses()[eventId];
+    return entry && new Date(entry.expiresAt).getTime() > Date.now() + 5000 ? entry.pass : null;
+  }
+}
+
+export interface QueueStatus {
+  eventId: number;
+  inQueue: boolean;
+  admitted: boolean;
+  ahead: number;
+  etaSeconds: number;
+  pass?: string;
+  passExpiresAt?: string;
+}
+
+const QUEUE_PASSES = 'ticketrush.queuePasses';
+
+function savedPasses(): Record<string, { pass: string; expiresAt: string }> {
+  return JSON.parse(sessionStorage.getItem(QUEUE_PASSES) ?? '{}') as Record<string, { pass: string; expiresAt: string }>;
+}
+
+function rememberPass(status: QueueStatus): QueueStatus {
+  if (status.admitted && status.pass && status.passExpiresAt) {
+    const saved = savedPasses();
+    saved[status.eventId] = { pass: status.pass, expiresAt: status.passExpiresAt };
+    sessionStorage.setItem(QUEUE_PASSES, JSON.stringify(saved));
+  }
+  return status;
+}
+
+export interface TicketView {
+  code: string;
+  qrPayload: string;
+  orderCode: string;
+  userLogin: string;
+  eventId: number;
+  ticketTypeId: number;
+  seatNo: number;
+  seatsOfType: number;
+  status: TicketPass['status'];
+  issuedAt: string;
+  checkedInAt?: string;
+}
+
+async function toPass(ticket: TicketView, holder: string): Promise<TicketPass> {
+  const event = await publicEvent(ticket.eventId);
+  return {
+    id: ticket.code,
+    orderCode: ticket.orderCode,
+    eventId: ticket.eventId,
+    eventTitle: event?.name ?? `Sự kiện #${ticket.eventId}`,
+    eventDate: event?.startTime ?? ticket.issuedAt,
+    venueName: event?.venue.name ?? '',
+    venueAddress: event ? `${event.venue.address}, ${event.venue.city}` : '',
+    ticketTypeName: event?.ticketTypes.find(type => type.id === ticket.ticketTypeId)?.name ?? `Loại vé #${ticket.ticketTypeId}`,
+    seatInfo: `Vé ${ticket.seatNo}/${ticket.seatsOfType}`,
+    qrPayload: ticket.qrPayload,
+    customerName: holder,
+    status: ticket.status,
+    checkInAt: ticket.checkedInAt ? new Date(ticket.checkedInAt).toLocaleString('vi-VN') : undefined,
+  };
 }

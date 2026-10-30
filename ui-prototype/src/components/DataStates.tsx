@@ -51,11 +51,3 @@ export const ErrorState: React.FC<{
     </div>
   );
 };
-
-
-/** Marks screens that still run on sample data: the backend for them is not built yet. */
-export const DemoBanner: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div role="note" className="alert alert-warning py-2 small mb-4">
-    <strong>Bản demo:</strong> {children}
-  </div>
-);

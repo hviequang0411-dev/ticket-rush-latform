@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, Boxes } from 'lucide-react';
 import { AdminApi, type ActiveHold } from '../../api/adminApi';
 import { formatVND } from '../../lib/format';
 import { ErrorState } from '../../components/DataStates';
@@ -35,6 +35,9 @@ export const AdminInventoryPage: React.FC = () => {
   return (
     <div>
       <div className="mb-4">
+        <span className="tr-badge badge-info mb-1">
+          <Boxes size={13} /> STOCK &amp; HOLD MONITOR
+        </span>
         <h1 className="fs-3 fw-bold mb-1">Giám sát kho vé &amp; Phiên giữ chỗ</h1>
         <p className="text-muted small mb-0">
           Đã bán / Đang giữ / Còn lại theo từng loại vé, tự làm mới mỗi {REFRESH_MS / 1000} giây. Mỗi loại vé luôn có còn lại + đang giữ + đã bán = tổng.
@@ -54,7 +57,9 @@ export const AdminInventoryPage: React.FC = () => {
                   <h2 className="fs-5 fw-bold text-main mb-0">{event.name}</h2>
                   <span className="small text-muted">{event.venue.name} • {event.venue.city}</span>
                 </div>
-                <span className="badge bg-secondary-subtle text-secondary">{event.status === 'DRAFT' ? 'Nháp' : 'Đang bán'}</span>
+                <span className={`tr-badge ${event.status === 'DRAFT' ? 'badge-neutral' : 'badge-success'}`}>
+                  {event.status === 'DRAFT' ? 'Nháp' : 'Đang bán'}
+                </span>
               </div>
 
               <div className="d-flex flex-column gap-3">
@@ -76,13 +81,13 @@ export const AdminInventoryPage: React.FC = () => {
                       <div className="d-flex justify-content-between align-items-center mb-2">
                         <div>
                           <span className="fw-bold text-main">{tt.name}</span>
-                          <span className="text-muted small ms-2">({formatVND(tt.price)})</span>
+                          <span className="text-muted small ms-2 tabular-nums">({formatVND(tt.price)})</span>
                         </div>
-                        <div className="small text-muted">Tổng cung: <strong>{total} vé</strong></div>
+                        <div className="small text-muted tabular-nums">Tổng cung: <strong className="text-main">{total.toLocaleString('vi-VN')} vé</strong></div>
                       </div>
                       <div
                         className="progress mb-2"
-                        style={{ height: 16 }}
+                        style={{ height: 14, borderRadius: 999 }}
                         role="img"
                         aria-label={`Đã bán ${level.soldQuantity}, đang giữ ${level.heldQuantity}, còn lại ${level.availableQuantity} trên ${total} vé`}
                       >
@@ -93,15 +98,15 @@ export const AdminInventoryPage: React.FC = () => {
                       <div className="d-flex flex-wrap justify-content-between gap-2 small text-muted">
                         <span className="d-flex align-items-center gap-1">
                           <span className="rounded-circle d-inline-block bg-success" style={{ width: 8, height: 8 }} />
-                          Đã thanh toán: <strong className="tabular-nums">{level.soldQuantity} ({soldPct}%)</strong>
+                          Đã thanh toán: <strong className="text-main tabular-nums">{level.soldQuantity} ({soldPct}%)</strong>
                         </span>
                         <span className="d-flex align-items-center gap-1">
                           <span className="rounded-circle d-inline-block bg-warning" style={{ width: 8, height: 8 }} />
-                          Đang giữ chỗ (10p): <strong className="tabular-nums">{level.heldQuantity} ({heldPct}%)</strong>
+                          Đang giữ chỗ (10p): <strong className="text-main tabular-nums">{level.heldQuantity} ({heldPct}%)</strong>
                         </span>
                         <span className="d-flex align-items-center gap-1">
                           <span className="rounded-circle d-inline-block bg-secondary" style={{ width: 8, height: 8 }} />
-                          Còn lại: <strong className="tabular-nums">{level.availableQuantity} ({availablePct}%)</strong>
+                          Còn lại: <strong className="text-main tabular-nums">{level.availableQuantity} ({availablePct}%)</strong>
                         </span>
                       </div>
                     </div>
@@ -113,25 +118,28 @@ export const AdminInventoryPage: React.FC = () => {
         ))}
       </div>
 
-      <div className="tr-card p-4">
-        <div className="d-flex align-items-center gap-2 mb-3">
-          <Clock size={20} className="text-warning" />
-          <h2 className="fs-5 fw-bold mb-0">Phiên giữ chỗ sắp hết hạn</h2>
+      <div className="tr-table-card">
+        <div className="p-3 p-md-4 border-bottom border-subtle d-flex align-items-center justify-content-between">
+          <div className="d-flex align-items-center gap-2">
+            <Clock size={20} className="text-warning" />
+            <h2 className="fs-5 fw-bold mb-0">Phiên giữ chỗ sắp hết hạn (Active Hold TTL)</h2>
+          </div>
+          <span className="tr-badge badge-warning tabular-nums">{holds.length} phiên đang giữ</span>
         </div>
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
-              <tr className="small text-muted">
+            <thead>
+              <tr>
                 <th>ĐƠN (ID)</th>
                 <th>SỰ KIỆN</th>
-                <th>SỐ LƯỢNG</th>
-                <th>CÒN LẠI</th>
+                <th>HẠNG VÉ &amp; SỐ LƯỢNG</th>
+                <th className="text-end">THỜI GIAN CÒN LẠI</th>
               </tr>
             </thead>
             <tbody>
               {holds.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="text-center text-muted py-3 small">Không có ghế nào đang được giữ.</td>
+                  <td colSpan={4} className="text-center text-muted py-4 small">Không có ghế nào đang được giữ.</td>
                 </tr>
               )}
               {holds.map(hold => {
@@ -139,10 +147,10 @@ export const AdminInventoryPage: React.FC = () => {
                 return (
                   <tr key={hold.holdId}>
                     <td className="font-monospace fw-bold text-main">#{hold.orderId}</td>
-                    <td>{eventName(hold.eventId)}</td>
-                    <td>{hold.quantity} vé {ticketTypeName(hold.ticketTypeId)}</td>
-                    <td>
-                      <span className={`badge font-monospace ${left < 120000 ? 'bg-danger text-white' : 'bg-warning text-dark'}`}>
+                    <td className="fw-medium text-main">{eventName(hold.eventId)}</td>
+                    <td className="small tabular-nums">{hold.quantity} vé {ticketTypeName(hold.ticketTypeId)}</td>
+                    <td className="text-end">
+                      <span className={`tr-badge font-monospace tabular-nums ${left < 120000 ? 'badge-danger' : 'badge-warning'}`}>
                         {left > 0 ? remaining(hold.expiresAt, now) : 'Đang trả về kho'}
                       </span>
                     </td>

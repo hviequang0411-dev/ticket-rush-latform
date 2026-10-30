@@ -1,363 +1,359 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Filter, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Search, SlidersHorizontal, MapPin, Calendar, X, RotateCcw, ArrowUpDown } from 'lucide-react';
 import { ApiService } from '../../api/apiClient';
 import type { Event, EventStatus } from '../../types/models';
 import { EventPoster } from '../../components/EventPoster';
 import { StatusBadge } from '../../components/StatusBadge';
-import { formatDateTimeVN, formatVND } from '../../lib/format';
-import { EmptyState, ErrorState } from '../../components/DataStates';
+import { EventCardSkeleton, EmptyState, ErrorState } from '../../components/DataStates';
+import { formatVND, formatDateTimeVN, formatDateOnlyVN } from '../../lib/format';
+
+type CategoryFilter = Event['category'] | 'ALL';
+
+function minTicketPrice(event: Event): number {
+  if (event.ticketTypes.length === 0) return 0;
+  return Math.min(...event.ticketTypes.map(t => t.price));
+}
 
 export const EventListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [events, setEvents] = useState<Event[]>([]);
+
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [cityFilter, setCityFilter] = useState(searchParams.get('city') || '');
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('cat') || '');
-  const [statusFilter, setStatusFilter] = useState<EventStatus | ''>('');
-  const [priceMax, setPriceMax] = useState<number>(3000000);
-  const [sortBy, setSortBy] = useState<'date-asc' | 'date-desc' | 'price-asc' | 'price-desc'>('date-asc');
+  // Filter states initialized from URL params
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
+  const [city, setCity] = useState(searchParams.get('city') || 'ALL');
+  const [category, setCategory] = useState<CategoryFilter>(
+    (searchParams.get('category') as CategoryFilter) || 'ALL'
+  );
+  const [status, setStatus] = useState<EventStatus | 'ALL'>('ALL');
+  const [maxPrice, setMaxPrice] = useState<number>(5000000);
+  const [sortBy, setSortBy] = useState<'date' | 'price-asc' | 'price-desc'>('date');
 
-  // Mobile bottom sheet filter toggle
-  const [showMobileFilter, setShowMobileFilter] = useState<boolean>(false);
-
-  useEffect(() => {
-    loadEvents();
-  }, []);
+  // Mobile drawer state
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const loadEvents = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await ApiService.getEvents();
-      setEvents(data);
-    } catch (e: unknown) {
-      const err = e as { message?: string };
-      setError(err.message || 'Không thể tải sự kiện.');
+      setAllEvents(data);
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      setError(e.detail || e.message || 'Lỗi khi lọc danh sách sự kiện.');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredEvents = useMemo(() => {
-    return events.filter(e => {
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = e.name.toLowerCase().includes(q);
-        const matchesDesc = e.description.toLowerCase().includes(q);
-        const matchesVenue = e.venue.name.toLowerCase().includes(q);
-        if (!matchesName && !matchesDesc && !matchesVenue) return false;
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const events = allEvents
+    .filter(ev => {
+      if (keyword.trim()) {
+        const q = keyword.trim().toLowerCase();
+        if (!ev.name.toLowerCase().includes(q) && !ev.venue.name.toLowerCase().includes(q)) return false;
       }
-      if (cityFilter && e.venue.city !== cityFilter) return false;
-      if (categoryFilter && e.category !== categoryFilter) return false;
-      if (statusFilter && e.status !== statusFilter) return false;
-
-      // Price check
-      const minPrice = e.ticketTypes.length > 0 ? Math.min(...e.ticketTypes.map(t => t.price)) : 0;
-      if (minPrice > priceMax) return false;
-
+      if (city !== 'ALL' && ev.venue.city !== city) return false;
+      if (category !== 'ALL' && ev.category !== category) return false;
+      if (status !== 'ALL' && ev.status !== status) return false;
+      if (minTicketPrice(ev) > maxPrice) return false;
       return true;
-    }).sort((a, b) => {
-      const minA = a.ticketTypes.length > 0 ? Math.min(...a.ticketTypes.map(t => t.price)) : 0;
-      const minB = b.ticketTypes.length > 0 ? Math.min(...b.ticketTypes.map(t => t.price)) : 0;
-
-      if (sortBy === 'date-asc') return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-      if (sortBy === 'date-desc') return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
-      if (sortBy === 'price-asc') return minA - minB;
-      if (sortBy === 'price-desc') return minB - minA;
-      return 0;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'price-asc') return minTicketPrice(a) - minTicketPrice(b);
+      if (sortBy === 'price-desc') return minTicketPrice(b) - minTicketPrice(a);
+      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
     });
-  }, [events, searchQuery, cityFilter, categoryFilter, statusFilter, priceMax, sortBy]);
 
-  const resetFilters = () => {
-    setSearchQuery('');
-    setCityFilter('');
-    setCategoryFilter('');
-    setStatusFilter('');
-    setPriceMax(3000000);
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
+  const handleResetFilters = () => {
+    setKeyword('');
+    setCity('ALL');
+    setCategory('ALL');
+    setStatus('ALL');
+    setMaxPrice(5000000);
+    setSortBy('date');
     setSearchParams({});
   };
 
+  const renderFilterControls = () => (
+    <div className="d-flex flex-column gap-4">
+      <div>
+        <label className="form-label fw-semibold small text-muted" htmlFor="filterCity">
+          Thành phố tổ chức
+        </label>
+        <select
+          id="filterCity"
+          className="form-select"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+        >
+          <option value="ALL">Tất cả thành phố</option>
+          <option value="Hà Nội">Hà Nội</option>
+          <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+          <option value="Đà Nẵng">Đà Nẵng</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="form-label fw-semibold small text-muted" htmlFor="filterCategory">
+          Danh mục sự kiện
+        </label>
+        <select
+          id="filterCategory"
+          className="form-select"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as CategoryFilter)}
+        >
+          <option value="ALL">Tất cả thể loại</option>
+          <option value="Concert">Concert / Đêm nhạc</option>
+          <option value="Festival">Festival / Lễ hội</option>
+          <option value="Sân khấu">Sân khấu &amp; Nghệ thuật</option>
+          <option value="Thể thao">Thể thao</option>
+          <option value="Workshop">Hội thảo &amp; Workshop</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="form-label fw-semibold small text-muted" htmlFor="filterStatus">
+          Trạng thái mở bán
+        </label>
+        <select
+          id="filterStatus"
+          className="form-select"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as EventStatus | 'ALL')}
+        >
+          <option value="ALL">Tất cả trạng thái</option>
+          <option value="PUBLISHED">Đang mở bán</option>
+          <option value="DRAFT">Sắp mở bán (Nháp)</option>
+          <option value="ENDED">Đã kết thúc</option>
+        </select>
+      </div>
+
+      <div>
+        <div className="d-flex justify-content-between align-items-center mb-1">
+          <label className="form-label fw-semibold small text-muted mb-0" htmlFor="filterPrice">
+            Mức giá tối đa
+          </label>
+          <span className="small fw-bold text-primary tabular-nums">{formatVND(maxPrice)}</span>
+        </div>
+        <input
+          id="filterPrice"
+          type="range"
+          className="form-range"
+          min={200000}
+          max={5000000}
+          step={100000}
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(Number(e.target.value))}
+        />
+        <div className="d-flex justify-content-between text-muted" style={{ fontSize: '0.72rem' }}>
+          <span>200.000 ₫</span>
+          <span>5.000.000 ₫</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleResetFilters}
+        className="btn btn-tr-secondary w-100 d-flex align-items-center justify-content-center gap-2"
+      >
+        <RotateCcw size={16} />
+        <span>Đặt lại bộ lọc</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="tr-container py-4">
-      {/* Header Bar */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 pb-3 border-bottom border-subtle">
         <div>
-          <h1 className="fs-3 fw-bold mb-1">Khám phá tất cả sự kiện</h1>
-          <p className="text-muted small mb-0">Tìm kiếm vé hòa nhạc, lễ hội và sân khấu trên toàn quốc</p>
+          <h1 className="fs-3 fw-bold mb-1">Khám phá &amp; Tìm kiếm Sự kiện</h1>
+          <p className="text-muted small mb-0">
+            Hiển thị <strong className="text-main tabular-nums">{events.length}</strong> sự kiện phù hợp với tiêu chí của bạn
+          </p>
         </div>
 
-        <div className="d-flex align-items-center gap-2">
-          {/* Mobile Filter Button */}
-          <button
-            className="btn btn-tr-secondary d-md-none d-flex align-items-center gap-2"
-            onClick={() => setShowMobileFilter(true)}
-          >
-            <Filter size={16} /> Bộ lọc
-          </button>
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <form onSubmit={handleSearchSubmit} className="d-flex gap-2 flex-grow-1">
+            <div className="input-group">
+              <span className="input-group-text border-end-0">
+                <Search size={16} className="text-muted" />
+              </span>
+              <input
+                type="text"
+                className="form-control border-start-0"
+                placeholder="Tìm sự kiện, địa điểm..."
+                aria-label="Từ khoá tìm kiếm"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn btn-tr-primary flex-shrink-0">
+              Tìm
+            </button>
+          </form>
 
-          {/* Sort dropdown */}
-          <div className="d-flex align-items-center gap-2">
-            <span className="small text-muted d-none d-sm-inline">Sắp xếp:</span>
-            <select
-              className="form-select form-select-sm"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              style={{ width: 'auto' }}
-            >
-              <option value="date-asc">Ngày diễn ra (gần nhất)</option>
-              <option value="date-desc">Ngày diễn ra (xa nhất)</option>
-              <option value="price-asc">Giá vé (thấp đến cao)</option>
-              <option value="price-desc">Giá vé (cao đến thấp)</option>
-            </select>
-          </div>
+          <button
+            type="button"
+            className="btn btn-tr-secondary d-lg-none"
+            onClick={() => setShowMobileFilters(true)}
+          >
+            <SlidersHorizontal size={16} />
+            <span>Bộ lọc</span>
+          </button>
         </div>
       </div>
 
       <div className="row g-4">
-        {/* Desktop Sidebar Filters */}
-        <div className="col-12 col-md-3 d-none d-md-block">
-          <div className="tr-card p-3">
-            <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-subtle">
-              <span className="fw-semibold">Bộ lọc tìm kiếm</span>
-              <button onClick={resetFilters} className="btn btn-sm btn-link text-decoration-none p-0 small">
-                Đặt lại
-              </button>
+        <aside className="col-lg-3 d-none d-lg-block">
+          <div className="tr-card p-4 sticky-top" style={{ top: '84px' }}>
+            <div className="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-subtle">
+              <SlidersHorizontal size={18} className="text-primary" />
+              <h2 className="fs-6 fw-bold mb-0">Bộ lọc tìm kiếm</h2>
             </div>
+            {renderFilterControls()}
+          </div>
+        </aside>
 
-            {/* Keyword */}
-            <div className="mb-3">
-              <label className="form-label small fw-semibold text-muted" htmlFor="sidebarSearch">Từ khoá</label>
-              <input
-                id="sidebarSearch"
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Tên sự kiện, nghệ sĩ..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <div className="col-12 col-lg-9">
+          <div className="tr-card p-3 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              {city !== 'ALL' && (
+                <span className="tr-badge badge-info">
+                  Khu vực: {city}
+                </span>
+              )}
+              {category !== 'ALL' && (
+                <span className="tr-badge badge-warning">
+                  Thể loại: {category}
+                </span>
+              )}
+              {city === 'ALL' && category === 'ALL' && (
+                <span className="small text-muted">Đang hiển thị tất cả khu vực &amp; thể loại</span>
+              )}
             </div>
-
-            {/* City */}
-            <div className="mb-3">
-              <label className="form-label small fw-semibold text-muted" htmlFor="sidebarCity">Thành phố</label>
+            <div className="d-flex align-items-center gap-2 ms-auto">
+              <ArrowUpDown size={15} className="text-muted" />
+              <label htmlFor="sortSelect" className="small text-muted mb-0">Sắp xếp:</label>
               <select
-                id="sidebarCity"
-                className="form-select form-select-sm"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
+                id="sortSelect"
+                className="form-select form-select-sm w-auto"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'price-asc' | 'price-desc')}
               >
-                <option value="">Tất cả thành phố</option>
-                <option value="Hà Nội">Hà Nội</option>
-                <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                <option value="Đà Nẵng">Đà Nẵng</option>
+                <option value="date">Ngày diễn ra gần nhất</option>
+                <option value="price-asc">Giá vé: Thấp đến Cao</option>
+                <option value="price-desc">Giá vé: Cao đến Thấp</option>
               </select>
-            </div>
-
-            {/* Category */}
-            <div className="mb-3">
-              <label className="form-label small fw-semibold text-muted" htmlFor="sidebarCategory">Thể loại</label>
-              <select
-                id="sidebarCategory"
-                className="form-select form-select-sm"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">Tất cả thể loại</option>
-                <option value="Concert">Concert</option>
-                <option value="Festival">Festival</option>
-                <option value="Sân khấu">Sân khấu</option>
-                <option value="Thể thao">Thể thao</option>
-                <option value="Workshop">Workshop</option>
-              </select>
-            </div>
-
-            {/* Status */}
-            <div className="mb-3">
-              <label className="form-label small fw-semibold text-muted" htmlFor="sidebarStatus">Trạng thái bán</label>
-              <select
-                id="sidebarStatus"
-                className="form-select form-select-sm"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as EventStatus | '')}
-              >
-                <option value="">Tất cả</option>
-                <option value="PUBLISHED">Đang mở bán</option>
-                <option value="DRAFT">Sắp mở bán</option>
-                <option value="ENDED">Đã kết thúc</option>
-              </select>
-            </div>
-
-            {/* Price Max slider */}
-            <div className="mb-2">
-              <div className="d-flex justify-content-between small text-muted mb-1">
-                <span>Mức giá tối đa</span>
-                <span className="fw-bold text-main tabular-nums">{formatVND(priceMax)}</span>
-              </div>
-              <input
-                type="range"
-                className="form-range"
-                min="300000"
-                max="3000000"
-                step="100000"
-                value={priceMax}
-                onChange={(e) => setPriceMax(Number(e.target.value))}
-              />
             </div>
           </div>
-        </div>
 
-        {/* Results List */}
-        <div className="col-12 col-md-9">
           {error && <ErrorState message={error} onRetry={loadEvents} />}
 
           {loading ? (
-            <div className="row g-3">
-              {[1, 2, 3, 4, 5, 6].map(n => (
-                <div key={n} className="col-12 col-sm-6">
-                  <div className="tr-card p-0">
-                    <div className="tr-skeleton w-100" style={{ height: 160 }} />
-                    <div className="p-3">
-                      <div className="tr-skeleton w-75 mb-2" style={{ height: 18 }} />
-                      <div className="tr-skeleton w-50" style={{ height: 14 }} />
-                    </div>
-                  </div>
+            <div className="row g-4">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="col-12 col-md-6">
+                  <EventCardSkeleton />
                 </div>
               ))}
             </div>
-          ) : filteredEvents.length === 0 ? (
+          ) : events.length === 0 ? (
             <EmptyState
               title="Không tìm thấy sự kiện phù hợp"
-              description="Hãy thử thay đổi từ khoá tìm kiếm, thành phố hoặc khoảng giá lọc."
-              actionText="Đặt lại bộ lọc"
-              onAction={resetFilters}
+              description="Không có sự kiện nào khớp với bộ lọc hiện tại của bạn. Hãy thử nới lỏng khoảng giá hoặc chọn tất cả thành phố."
+              actionText="Xoá bộ lọc"
+              onAction={handleResetFilters}
             />
           ) : (
-            <div className="row g-3">
-              {filteredEvents.map(ev => {
-                const minPrice = ev.ticketTypes.length > 0
-                  ? Math.min(...ev.ticketTypes.map(t => t.price))
-                  : 0;
-                return (
-                  <div key={ev.id} className="col-12 col-sm-6 col-lg-4">
-                    <div className="tr-card tr-card-hover h-100 d-flex flex-column">
-                      <EventPoster
-                        title={ev.name}
-                        category={ev.category}
-                        dateStr={formatDateTimeVN(ev.startTime)}
-                        venueName={ev.venue.name}
-                        bgConfig={ev.posterBg}
-                        height={160}
-                      />
-                      <div className="p-3 d-flex flex-column flex-grow-1 justify-content-between">
+            <div className="row g-4">
+              {events.map((event) => (
+                <div key={event.id} className="col-12 col-md-6">
+                  <Link
+                    to={`/events/${event.slug}`}
+                    className="tr-card tr-card-interactive overflow-hidden h-100 d-flex flex-column text-decoration-none"
+                  >
+                    <EventPoster
+                      title={event.name}
+                      category={event.category}
+                      dateText={formatDateOnlyVN(event.startTime)}
+                      city={event.venue.city}
+                      posterBg={event.posterBg}
+                      height={195}
+                    />
+                    <div className="p-3 p-md-4 d-flex flex-column flex-grow-1 justify-content-between">
+                      <div>
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span className="small text-muted d-flex align-items-center gap-1 tabular-nums">
+                            <Calendar size={14} className="text-primary" />
+                            {formatDateTimeVN(event.startTime)}
+                          </span>
+                          <StatusBadge type="event" status={event.status} />
+                        </div>
+                        <h3 className="fs-6 fw-bold text-main mb-2">{event.name}</h3>
+                        <p className="small text-muted mb-3 d-flex align-items-center gap-1">
+                          <MapPin size={14} className="flex-shrink-0" />
+                          <span className="text-truncate">{event.venue.name}, {event.venue.city}</span>
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-top border-subtle d-flex justify-content-between align-items-center">
                         <div>
-                          <div className="d-flex align-items-center justify-content-between mb-2">
-                            <StatusBadge type="event" status={ev.status} />
-                            <span className="small text-muted">{ev.venue.city}</span>
-                          </div>
-                          <h4 className="fs-6 fw-bold mb-2 text-truncate-2">
-                            <Link to={`/events/${ev.slug}`} className="text-main text-decoration-none">
-                              {ev.name}
-                            </Link>
-                          </h4>
-                          <p className="small text-muted mb-3 text-truncate-2" style={{ fontSize: '0.8125rem' }}>
-                            {ev.description}
-                          </p>
+                          <span className="text-muted d-block" style={{ fontSize: '0.72rem' }}>Giá từ</span>
+                          <span className="fw-bold text-primary tabular-nums">{formatVND(minTicketPrice(event))}</span>
                         </div>
-                        <div className="pt-2 border-top border-subtle d-flex align-items-center justify-content-between mt-auto">
-                          <div>
-                            <span className="small text-muted" style={{ fontSize: '0.75rem' }}>Từ</span>
-                            <div className="fw-bold text-primary tabular-nums fs-6">
-                              {formatVND(minPrice)}
-                            </div>
-                          </div>
-                          <Link to={`/events/${ev.slug}`} className="btn btn-sm btn-tr-secondary">
-                            Chi tiết
-                          </Link>
-                        </div>
+                        <span className="btn btn-sm btn-tr-secondary py-1 px-3">Chọn vé</span>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  </Link>
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Mobile Bottom Sheet Filters */}
-      {showMobileFilter && (
+      {showMobileFilters && (
         <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 z-3 d-flex flex-column justify-content-end"
-          onClick={() => setShowMobileFilter(false)}
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none"
+          style={{ zIndex: 1050, backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowMobileFilters(false)}
         >
           <div
-            className="bg-surface rounded-top-4 p-4 shadow-lg w-100"
+            className="position-absolute bottom-0 start-0 w-100 bg-surface rounded-top-4 p-4 shadow-lg"
             style={{ maxHeight: '85vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-subtle">
-              <h5 className="fw-bold mb-0">Bộ lọc tìm kiếm</h5>
-              <button className="btn btn-tr-ghost p-1" onClick={() => setShowMobileFilter(false)}>
+            <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-subtle">
+              <h3 className="fs-5 fw-bold mb-0">Bộ lọc sự kiện</h3>
+              <button
+                type="button"
+                className="btn-tr-ghost p-1"
+                onClick={() => setShowMobileFilters(false)}
+                aria-label="Đóng bộ lọc"
+              >
                 <X size={20} />
               </button>
             </div>
-
-            <div className="mb-3">
-              <label className="form-label small fw-semibold" htmlFor="mSearchInput">Từ khoá</label>
-              <input
-                id="mSearchInput"
-                type="text"
-                className="form-control"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label small fw-semibold" htmlFor="mCitySelect">Thành phố</label>
-              <select
-                id="mCitySelect"
-                className="form-select"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-              >
-                <option value="">Tất cả thành phố</option>
-                <option value="Hà Nội">Hà Nội</option>
-                <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                <option value="Đà Nẵng">Đà Nẵng</option>
-              </select>
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label small fw-semibold" htmlFor="mCategorySelect">Thể loại</label>
-              <select
-                id="mCategorySelect"
-                className="form-select"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">Tất cả thể loại</option>
-                <option value="Concert">Concert</option>
-                <option value="Festival">Festival</option>
-                <option value="Sân khấu">Sân khấu</option>
-                <option value="Thể thao">Thể thao</option>
-                <option value="Workshop">Workshop</option>
-              </select>
-            </div>
-
-            <div className="d-flex gap-2 mt-4">
-              <button className="btn btn-tr-secondary flex-grow-1" onClick={resetFilters}>
-                Đặt lại
-              </button>
-              <button className="btn btn-tr-primary flex-grow-1" onClick={() => setShowMobileFilter(false)}>
-                Áp dụng kết quả ({filteredEvents.length})
-              </button>
-            </div>
+            {renderFilterControls()}
+            <button
+              type="button"
+              className="btn btn-tr-primary w-100 mt-3"
+              onClick={() => setShowMobileFilters(false)}
+            >
+              Áp dụng ({events.length} kết quả)
+            </button>
           </div>
         </div>
       )}

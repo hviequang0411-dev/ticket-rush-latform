@@ -1,172 +1,124 @@
-// Design Tokens SCSS & Bootstrap Overrides
-:root {
-  /* Colors - Light Theme */
-  --bg-app: #faf9f6; /* Nền trắng ngà ấm */
-  --bg-surface: #ffffff;
-  --bg-surface-subtle: #f4f2ec;
-  --bg-surface-hover: #ece9df;
-  
-  --text-main: #0f172a; /* Xanh mực đậm */
-  --text-muted: #475569;
-  --text-subtle: #64748b;
-  
-  --border-subtle: #e2dfd5;
-  --border-strong: #cbd5e1;
+:root, [data-theme="light"] {
+  /* Typography */
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Lexend', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Primary CTA: Đỏ san hô / Cam Vermilion */
-  --color-primary: #ea580c; 
+  /* Type Scale (12 / 14 / 16 / 18 / 22 / 28 / 36 / 48 / 64) */
+  --fs-xs: 0.75rem;     /* 12px */
+  --fs-sm: 0.875rem;    /* 14px */
+  --fs-base: 1rem;      /* 16px */
+  --fs-md: 1.125rem;    /* 18px */
+  --fs-lg: 1.375rem;    /* 22px */
+  --fs-xl: 1.75rem;     /* 28px */
+  --fs-2xl: 2.25rem;    /* 36px */
+  --fs-3xl: 3rem;       /* 48px */
+  --fs-display: 3.75rem;/* 60px-64px */
+
+  /* Core Palette - Warm Ivory & Deep Ink Navy */
+  --bg-app: #faf8f5;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f3f0ea;
+  --bg-surface-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #526077;
+  --text-inverse: #ffffff;
+
+  /* Primary Brand CTA - Coral Vermilion */
+  --color-primary: #ea580c;
   --color-primary-hover: #c2410c;
   --color-primary-active: #9a3412;
-  --color-primary-subtle: #fff7ed;
+  --color-primary-subtle: #fff1e6;
   --color-primary-border: #fdba74;
 
-  /* Semantic status colors - WCAG AA compliant */
+  /* Secondary Data Accent - Deep Teal */
+  --color-accent: #0d9488;
+  --color-accent-subtle: #ccfbf1;
+
+  /* Warm Gray Borders & Dividers */
+  --border-subtle: #e5e0d5;
+  --border-strong: #cbc3b5;
+
+  /* Status Colors (WCAG AA compliant) */
   --color-success: #15803d;
-  --color-success-bg: #f0fdf4;
-  --color-success-border: #bbf7d0;
+  --color-success-bg: #dcfce7;
+  --color-success-border: #86efac;
 
   --color-warning: #b45309;
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fcd34d;
 
   --color-danger: #b91c1c;
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fecaca;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fca5a5;
 
   --color-info: #0369a1;
-  --color-info-bg: #f0f9ff;
-  --color-info-border: #bae6fd;
+  --color-info-bg: #e0f2fe;
+  --color-info-border: #7dd3fc;
 
-  /* Shadows - Tối đa 2 cấp */
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  --shadow-floating: 0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 8px -2px rgba(15, 23, 42, 0.06);
+  /* Elevation & Shadows (Strictly 2 soft levels) */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 6px -1px rgba(15, 23, 42, 0.06), 0 1px 3px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 12px 28px -6px rgba(15, 23, 42, 0.09), 0 4px 10px -3px rgba(15, 23, 42, 0.04);
+  --shadow-lg: var(--shadow-md);
 
-  /* Border radius */
+  /* Radii (8 / 12 / 20 / pill) */
   --radius-sm: 6px;
-  --radius-md: 8px; /* Card */
-  --radius-lg: 12px; /* Large container */
-  --radius-pill: 9999px; /* Badge */
+  --radius-card: 8px;
+  --radius-block: 12px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
 
-  /* Focus ring */
-  --focus-ring: 0 0 0 3px rgba(234, 88, 12, 0.25);
-  --focus-ring-danger: 0 0 0 3px rgba(185, 28, 28, 0.25);
-
-  --font-family-base: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Focus Ring */
+  --focus-ring: 0 0 0 3px rgba(234, 88, 12, 0.32);
 }
 
 [data-theme="dark"] {
-  --bg-app: #090d16;
-  --bg-surface: #111827;
-  --bg-surface-subtle: #1f2937;
-  --bg-surface-hover: #374151;
+  /* Warm Charcoal Dark Palette (Never #000000) */
+  --bg-app: #0c1017;
+  --bg-surface: #151b26;
+  --bg-surface-subtle: #1d2534;
+  --bg-surface-elevated: #20293a;
+  --bg-glass: rgba(21, 27, 38, 0.88);
 
   --text-main: #f8fafc;
+  --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
-  --text-subtle: #64748b;
-
-  --border-subtle: #1e293b;
-  --border-strong: #334155;
+  --text-inverse: #0f172a;
 
   --color-primary: #f97316;
-  --color-primary-hover: #ea580c;
-  --color-primary-active: #c2410c;
-  --color-primary-subtle: #2a1b14;
-  --color-primary-border: #7c2d12;
+  --color-primary-hover: #fb923c;
+  --color-primary-active: #ea580c;
+  --color-primary-subtle: rgba(249, 115, 22, 0.16);
+  --color-primary-border: rgba(251, 146, 60, 0.38);
 
-  --color-success: #22c55e;
-  --color-success-bg: #052e16;
-  --color-success-border: #14532d;
+  --color-accent: #2dd4bf;
+  --color-accent-subtle: rgba(45, 212, 191, 0.14);
 
-  --color-warning: #f59e0b;
-  --color-warning-bg: #2d1e05;
-  --color-warning-border: #78350f;
+  --border-subtle: #263042;
+  --border-strong: #38465f;
 
-  --color-danger: #ef4444;
-  --color-danger-bg: #311313;
-  --color-danger-border: #7f1d1d;
+  --color-success: #4ade80;
+  --color-success-bg: rgba(22, 163, 74, 0.2);
+  --color-success-border: rgba(74, 222, 128, 0.35);
+
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(217, 119, 6, 0.2);
+  --color-warning-border: rgba(251, 191, 36, 0.35);
+
+  --color-danger: #f87171;
+  --color-danger-bg: rgba(220, 38, 38, 0.2);
+  --color-danger-border: rgba(248, 113, 113, 0.35);
 
   --color-info: #38bdf8;
-  --color-info-bg: #082f49;
-  --color-info-border: #075985;
+  --color-info-bg: rgba(2, 132, 199, 0.2);
+  --color-info-border: rgba(56, 189, 248, 0.35);
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-floating: 0 12px 28px rgba(0, 0, 0, 0.6);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 14px 32px -6px rgba(0, 0, 0, 0.55);
+  --shadow-lg: var(--shadow-md);
 }
-
-/* Base resets & typography */
-body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--font-family-base);
-  font-size: 16px;
-  line-height: 1.6;
-  font-weight: 400;
-  background-color: var(--bg-app);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  color: var(--text-main);
-  line-height: 1.3;
-  margin-bottom: 0.5rem;
-}
-
-h1 { font-size: 36px; }
-h2 { font-size: 28px; }
-h3 { font-size: 22px; }
-h4 { font-size: 18px; }
-
-@media (min-width: 1024px) {
-  h1 { font-size: 48px; }
-  h2 { font-size: 36px; }
-}
-
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-a {
-  color: var(--color-primary);
-  text-decoration: none;
-  transition: color 150ms ease-out;
-}
-
-a:hover {
-  color: var(--color-primary-hover);
-  text-decoration: underline;
-}
-
-/* Accessible focus rings */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-a:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring) !important;
-}
-
-/* Global button reset to follow touch target 44px */
-.btn-touch-target {
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-

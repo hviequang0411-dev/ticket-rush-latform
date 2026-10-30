@@ -171,8 +171,8 @@ export const AdminEventsPage: React.FC = () => {
       </div>
 
       <div className="tr-card p-3 mb-4">
-        <div className="input-group" style={{ maxWidth: 400 }}>
-          <span className="input-group-text bg-surface-subtle border-end-0">
+        <div className="input-group" style={{ maxWidth: 420 }}>
+          <span className="input-group-text border-end-0">
             <Search size={16} className="text-muted" />
           </span>
           <input
@@ -188,16 +188,16 @@ export const AdminEventsPage: React.FC = () => {
 
       {error && <ErrorState title={error.title} message={error.detail} status={error.status} onRetry={() => load(searchTerm)} />}
 
-      <div className="tr-card overflow-hidden">
+      <div className="tr-table-card">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
-              <tr className="small text-muted">
+            <thead>
+              <tr>
                 <th>TÊN SỰ KIỆN</th>
                 <th>ĐỊA ĐIỂM</th>
                 <th>THỜI GIAN</th>
                 <th>TRẠNG THÁI</th>
-                <th>VÉ ĐÃ BÁN</th>
+                <th className="text-end">VÉ ĐÃ BÁN</th>
                 <th className="text-end">THAO TÁC</th>
               </tr>
             </thead>
@@ -219,24 +219,26 @@ export const AdminEventsPage: React.FC = () => {
                 return (
                   <tr key={ev.id}>
                     <td>
-                      <div className="fw-bold text-main d-flex align-items-center gap-2">
-                        {ev.name}
+                      <div className="fw-bold text-main d-flex flex-wrap align-items-center gap-2">
+                        <span>{ev.name}</span>
                         {ev.waitingRoom && (
-                          <span className="badge bg-warning-subtle text-warning d-inline-flex align-items-center gap-1" title="Bán qua phòng chờ">
+                          <span className="tr-badge badge-warning" title="Bán qua phòng chờ">
                             <Users size={12} /> Phòng chờ
                           </span>
                         )}
                       </div>
-                      <div className="font-monospace small text-muted" style={{ fontSize: '0.75rem' }}>slug: {ev.slug}</div>
+                      <div className="font-monospace small text-muted" style={{ fontSize: '0.74rem' }}>slug: {ev.slug}</div>
                     </td>
                     <td className="small">
-                      <div className="text-main">{ev.venue.name}</div>
+                      <div className="text-main fw-medium">{ev.venue.name}</div>
                       <div className="text-muted">{ev.venue.city}</div>
                     </td>
-                    <td className="small">{formatDateTimeVN(ev.startTime)}</td>
+                    <td className="small tabular-nums">{formatDateTimeVN(ev.startTime)}</td>
                     <td><StatusBadge type="event" status={ev.status} /></td>
-                    <td className="small tabular-nums">
-                      {total > 0 ? `${sold} / ${total}` : <span className="text-muted">Đang đồng bộ kho...</span>}
+                    <td className="small tabular-nums text-end">
+                      <div className="fw-bold text-main">
+                        {total > 0 ? `${sold.toLocaleString('vi-VN')} / ${total.toLocaleString('vi-VN')}` : <span className="text-muted fw-normal">Đang đồng bộ kho...</span>}
+                      </div>
                       <div className="text-muted">{ev.ticketTypes.length} loại vé</div>
                     </td>
                     <td className="text-end">
@@ -263,8 +265,8 @@ export const AdminEventsPage: React.FC = () => {
 
       {showModal && (
         <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 z-3 d-flex align-items-center justify-content-center p-3"
-          style={{ backdropFilter: 'blur(4px)' }}
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center p-3"
+          style={{ zIndex: 1060, backdropFilter: 'blur(4px)' }}
           onClick={() => setShowModal(false)}
         >
           <div
@@ -403,18 +405,18 @@ export const AdminEventsPage: React.FC = () => {
                         type="number"
                         min={0}
                         step={1000}
-                        className="form-control form-control-sm"
+                        className="form-control form-control-sm tabular-nums"
                         value={type.price}
                         onChange={e => setType(i, { price: Number(e.target.value) })}
                       />
-                      <div className="form-text small">{formatVND(type.price)}</div>
+                      <div className="form-text small tabular-nums">{formatVND(type.price)}</div>
                     </div>
                     <div className="col-4 col-sm-3">
                       <input
                         aria-label={`Số lượng loại vé ${i + 1}`}
                         type="number"
                         min={1}
-                        className="form-control form-control-sm"
+                        className="form-control form-control-sm tabular-nums"
                         value={type.totalQuantity}
                         onChange={e => setType(i, { totalQuantity: Number(e.target.value) })}
                       />

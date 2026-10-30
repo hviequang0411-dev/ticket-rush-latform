@@ -1,136 +1,213 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Users, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, AlertCircle, CheckCircle2, ArrowRight, Radio, Sparkles } from 'lucide-react';
 import { ApiService, type QueueStatus } from '../../api/apiClient';
-import { signIn, useAccount } from '../../api/auth';
-import type { ApiErrorProblem } from '../../types/models';
+import type { ApiErrorProblem, Event } from '../../types/models';
 import { ErrorState } from '../../components/DataStates';
 
-const POLL_MS = 2000;
-
-/**
- * The waiting room of a hot sale. The place is kept server-side per account, so reloading or opening another tab
- * does not lose it. Once admitted the buyer gets a pass (valid ~10 minutes) and goes on to checkout with the seats
- * chosen before queueing.
- */
 export const WaitingRoomPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const eventId = Number(searchParams.get('event'));
-  const slug = searchParams.get('slug') ?? '';
-  const { account, loading } = useAccount();
+  const eventSlug = searchParams.get('event') || 'neon-tide-festival-2026';
 
+  const [event, setEvent] = useState<Event | null>(null);
   const [status, setStatus] = useState<QueueStatus | null>(null);
+  const [initialPosition, setInitialPosition] = useState<number>(1);
   const [error, setError] = useState<ApiErrorProblem | null>(null);
-  // Where the buyer started, for the progress bar
-  const [firstAhead, setFirstAhead] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!account || !eventId) return;
-    let active = true;
-    let timer: ReturnType<typeof setTimeout>;
-    const step = async (join: boolean) => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const start = async () => {
       try {
-        const next = join ? await ApiService.joinQueue(eventId) : await ApiService.queueStatus(eventId);
-        if (!active) return;
-        setFirstAhead(first => first ?? next.ahead);
-        setStatus(next);
-        setError(null);
-        if (next.admitted) {
-          timer = setTimeout(() => navigate('/checkout'), 1200);
-          return;
-        }
+        const ev = await ApiService.getEventBySlug(eventSlug);
+        if (cancelled) return;
+        setEvent(ev);
+        const joined = await ApiService.joinQueue(ev.id);
+        if (cancelled) return;
+        setStatus(joined);
+        setInitialPosition(Math.max(1, joined.ahead + 1));
+
+        timer = setInterval(async () => {
+          try {
+            const next = await ApiService.queueStatus(ev.id);
+            if (cancelled) return;
+            setStatus(next);
+            if (next.admitted) {
+              clearInterval(timer);
+            }
+          } catch (e: unknown) {
+            if (!cancelled) setError(e as ApiErrorProblem);
+          }
+        }, 2000);
       } catch (e: unknown) {
-        if (active) setError(e as ApiErrorProblem);
+        if (!cancelled) setError(e as ApiErrorProblem);
       }
-      timer = setTimeout(() => step(false), POLL_MS);
     };
-    step(true);
+
+    start();
     return () => {
-      active = false;
-      clearTimeout(timer);
+      cancelled = true;
+      if (timer) clearInterval(timer);
     };
-  }, [account, eventId, navigate]);
+  }, [eventSlug]);
 
-  if (!eventId) {
+  useEffect(() => {
+    if (!status?.admitted || !event) return;
+    const redirect = setTimeout(() => {
+      if (sessionStorage.getItem('ticketrush.checkout')) {
+        navigate('/checkout');
+      } else {
+        navigate(`/events/${event.slug}`);
+      }
+    }, 1200);
+    return () => clearTimeout(redirect);
+  }, [status?.admitted, event, navigate]);
+
+  if (error) {
     return (
-      <div className="tr-container py-5">
-        <ErrorState title="Không rõ sự kiện" message="Hãy vào phòng chờ từ trang sự kiện." status={400} />
-        <Link to="/events" className="btn btn-tr-primary mt-3">Xem sự kiện</Link>
+      <div className="tr-container py-5" style={{ maxWidth: 680 }}>
+        <ErrorState title={error.title} message={error.detail} status={error.status} />
       </div>
     );
   }
 
-  if (!loading && !account) {
-    return (
-      <div className="tr-container py-5 d-flex justify-content-center">
-        <div className="tr-card p-4 p-md-5 text-center" style={{ maxWidth: 520 }}>
-          <Users size={40} className="text-primary mb-3" />
-          <h1 className="fs-4 fw-bold mb-2">Đăng nhập để vào hàng chờ</h1>
-          <p className="text-muted mb-4">Mỗi tài khoản giữ một chỗ trong hàng; lựa chọn vé của bạn vẫn được giữ.</p>
-          <button className="btn btn-tr-primary w-100 py-2" onClick={() => signIn(`/queue?event=${eventId}&slug=${encodeURIComponent(slug)}`)}>
-            Đăng nhập hoặc tạo tài khoản
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const ahead = status?.ahead ?? 0;
-  const start = Math.max(firstAhead ?? ahead, 1);
-  const progress = status?.admitted ? 100 : Math.min(99, Math.round(((start - ahead) / start) * 100));
+  const position = status ? status.ahead + 1 : 0;
+  const progressPercent = status?.admitted
+    ? 100
+    : Math.min(95, Math.max(8, Math.round(((initialPosition - position) / initialPosition) * 100)));
 
   return (
-    <div className="tr-container py-5 d-flex justify-content-center align-items-center" style={{ minHeight: '70vh' }}>
-      <div className="tr-card p-4 p-md-5 shadow-md text-center bg-surface" style={{ maxWidth: 580, width: '100%' }}>
-        <div className={`d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3 ${status?.admitted ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'}`}>
-          {status?.admitted ? <CheckCircle2 size={36} /> : <Users size={36} />}
+    <div className="tr-container py-5" style={{ maxWidth: 680 }}>
+      <div className="tr-card tr-card-featured p-4 p-md-5 text-center position-relative overflow-hidden">
+        <div
+          className="position-absolute top-0 start-0 w-100"
+          style={{
+            height: 5,
+            background: status?.admitted
+              ? 'var(--color-success)'
+              : 'linear-gradient(90deg, var(--color-primary), var(--color-accent))',
+          }}
+        />
+
+        <div className="d-inline-flex align-items-center gap-2 tr-badge badge-warning mb-3">
+          <Radio size={14} />
+          <span>PHÒNG CHỜ ẢO CHỊU TẢI CAO (VIRTUAL WAITING ROOM)</span>
         </div>
 
-        <h1 className="fs-3 fw-bold mb-2">{status?.admitted ? 'Đến lượt bạn!' : 'Phòng chờ TicketRush'}</h1>
-        <p className="text-muted small mb-4">
-          {status?.admitted
-            ? 'Đang chuyển sang thanh toán. Lượt vào có hiệu lực khoảng 10 phút.'
-            : 'Đợt mở bán đang rất đông. Mọi người được cho vào đặt vé theo đúng thứ tự xếp hàng, với tốc độ hệ thống chịu được.'}
+        <h1 className="fs-3 fw-bold text-main mb-2">
+          {status?.admitted ? 'Đã đến lượt của bạn!' : 'Bạn đang trong hàng chờ công bằng'}
+        </h1>
+        <p className="text-muted small mb-4 mx-auto" style={{ maxWidth: 500 }}>
+          Sự kiện <strong className="text-main">{event?.name ?? eventSlug}</strong> đang mở bán với lưu lượng truy cập lớn.
+          Hệ thống điều phối tuần tự để bảo vệ phiên giữ ghế của bạn.
         </p>
 
-        {error && <div className="alert alert-danger small text-start">{error.detail}. Đang thử lại...</div>}
+        {!status ? (
+          <div className="py-5 text-muted small">
+            <div className="spinner-border spinner-border-sm text-primary me-2" role="status" />
+            Đang cấp số thứ tự hàng chờ...
+          </div>
+        ) : !status.admitted ? (
+          <>
+            <div className="p-4 rounded-4 bg-surface-subtle border border-subtle mb-4">
+              <div className="row g-3 align-items-center">
+                <div className="col-6 border-end border-subtle">
+                  <div className="small text-muted mb-1">Vị trí hiện tại của bạn</div>
+                  <div
+                    className="display-5 fw-bold text-primary tabular-nums mb-0"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
+                    #{position}
+                  </div>
+                  <span className="small text-muted" style={{ fontSize: '0.75rem' }}>{status.ahead} người phía trước</span>
+                </div>
+                <div className="col-6">
+                  <div className="small text-muted mb-1">Thời gian chờ dự kiến</div>
+                  <div
+                    className="fs-2 fw-bold text-main tabular-nums mb-0"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
+                    ~{status.etaSeconds}s
+                  </div>
+                  <span className="small text-success fw-medium" style={{ fontSize: '0.75rem' }}>
+                    Đang nhích lên tự động
+                  </span>
+                </div>
+              </div>
 
-        <div className="row g-3 mb-4" aria-live="polite">
-          <div className="col-6">
-            <div className="p-3 bg-surface-subtle rounded-3 border border-subtle">
-              <div className="small text-muted mb-1">Người đứng trước bạn</div>
-              <div className="fs-3 fw-bold text-primary tabular-nums">{status ? (status.admitted ? 0 : ahead.toLocaleString('vi-VN')) : '…'}</div>
+              <div className="mt-4">
+                <div className="d-flex justify-content-between small text-muted mb-1">
+                  <span>Tiến độ hàng chờ</span>
+                  <span className="fw-bold text-primary tabular-nums">{progressPercent}%</span>
+                </div>
+                <div
+                  className="progress"
+                  style={{ height: 12, borderRadius: 999 }}
+                  role="progressbar"
+                  aria-valuenow={progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Tiến độ phòng chờ ảo"
+                >
+                  <div
+                    className="progress-bar progress-bar-striped progress-bar-animated"
+                    style={{
+                      width: `${progressPercent}%`,
+                      backgroundColor: 'var(--color-primary)',
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="col-6">
-            <div className="p-3 bg-surface-subtle rounded-3 border border-subtle">
-              <div className="small text-muted mb-1">Thời gian chờ ước tính</div>
-              <div className="fs-3 fw-bold text-main tabular-nums">{status ? (status.admitted ? '0s' : `~${status.etaSeconds}s`) : '…'}</div>
+
+            <div className="p-3 rounded-3 bg-surface border border-subtle text-start small mb-4">
+              <div className="d-flex align-items-start gap-2 mb-2">
+                <AlertCircle size={18} className="text-warning flex-shrink-0 mt-1" />
+                <div>
+                  <strong className="text-main">Lưu ý quan trọng: Không tải lại (Refresh) trình duyệt</strong>
+                  <div className="text-muted">
+                    Phiên xếp hàng của bạn được đồng bộ tự động mỗi 2 giây. Khi tới lượt, bạn được cấp chứng chỉ <code>X-Queue-Pass</code> trong 5 phút.
+                  </div>
+                </div>
+              </div>
+              <div className="d-flex align-items-center gap-2 text-muted pt-2 border-top border-subtle">
+                <ShieldCheck size={16} className="text-success flex-shrink-0" />
+                <span>Chống bot tự động • Xếp hàng FIFO công bằng 100%</span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="mb-4 text-start">
-          <div className="d-flex justify-content-between small text-muted mb-1">
-            <span>Tiến độ hàng chờ</span>
-            <span className="fw-semibold">{progress}%</span>
+            <Link to={`/events/${eventSlug}`} className="btn btn-tr-ghost small text-muted text-decoration-none">
+              Rời khỏi hàng chờ &amp; quay lại trang sự kiện
+            </Link>
+          </>
+        ) : (
+          <div className="py-4">
+            <div
+              className="d-inline-flex p-3 rounded-circle mb-3"
+              style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}
+            >
+              <CheckCircle2 size={56} />
+            </div>
+            <div className="mb-2">
+              <span className="tr-badge badge-success">
+                <Sparkles size={13} /> ĐÃ CẤP QUYỀN TRUY CẬP X-QUEUE-PASS
+              </span>
+            </div>
+            <h2 className="fs-4 fw-bold text-main mb-2">Mời bạn vào khu vực chọn &amp; đặt vé!</h2>
+            <p className="text-muted small mb-4">
+              Hệ thống đang tự động chuyển hướng bạn vào trang thanh toán...
+            </p>
+            <Link
+              to={sessionStorage.getItem('ticketrush.checkout') ? '/checkout' : `/events/${eventSlug}`}
+              className="btn btn-tr-primary px-4 py-2 text-decoration-none"
+            >
+              <span>Vào đặt vé ngay</span>
+              <ArrowRight size={18} />
+            </Link>
           </div>
-          <div className="progress" style={{ height: 8 }} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến độ hàng chờ">
-            <div className="progress-bar bg-primary progress-bar-striped progress-bar-animated" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-
-        <div className="small text-muted mb-4">Tải lại trang hay mở tab khác không làm mất chỗ: vị trí được giữ theo tài khoản.</div>
-
-        <div className="d-flex align-items-center justify-content-center gap-2 small text-muted">
-          <ShieldCheck size={16} className="text-success" />
-          <span>Không có lượt vào thì không đặt được vé, kể cả khi gọi thẳng API</span>
-        </div>
-        {slug && (
-          <Link to={`/events/${slug}`} className="btn btn-sm btn-link text-muted mt-3">
-            Rời hàng chờ, quay lại sự kiện
-          </Link>
         )}
       </div>
     </div>

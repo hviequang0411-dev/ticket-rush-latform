@@ -1,39 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle } from 'lucide-react';
-import { formatTimeRemaining } from '../lib/format';
+import { AlertTriangle } from 'lucide-react';
 
 interface ReservationTimerProps {
+  /** Remaining hold time in seconds when known directly (e.g. design system demo). */
   initialSeconds?: number;
+  /** Server-supplied hold deadline ISO instant; takes precedence over initialSeconds. */
   expiresAt?: string;
   onExpire?: () => void;
-  className?: string;
 }
 
+const TOTAL_HOLD_SECONDS = 600;
+
 export const ReservationTimer: React.FC<ReservationTimerProps> = ({
-  initialSeconds = 600, // 10 minutes
+  initialSeconds = 600,
   expiresAt,
   onExpire,
-  className = ''
 }) => {
-  const [secondsLeft, setSecondsLeft] = useState<number>(() => {
+  const computeRemaining = () => {
     if (expiresAt) {
-      const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000);
-      return diff > 0 ? diff : 0;
+      return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
     }
     return initialSeconds;
-  });
+  };
+
+  const [secondsLeft, setSecondsLeft] = useState<number>(computeRemaining);
+
+  useEffect(() => {
+    setSecondsLeft(computeRemaining());
+  }, [expiresAt, initialSeconds]);
 
   useEffect(() => {
     if (secondsLeft <= 0) {
-      if (onExpire) onExpire();
+      onExpire?.();
       return;
     }
-
     const timer = setInterval(() => {
-      setSecondsLeft(prev => {
+      setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          if (onExpire) onExpire();
+          onExpire?.();
           return 0;
         }
         return prev - 1;
@@ -43,35 +48,85 @@ export const ReservationTimer: React.FC<ReservationTimerProps> = ({
     return () => clearInterval(timer);
   }, [secondsLeft, onExpire]);
 
-  const isWarning = secondsLeft > 0 && secondsLeft <= 120; // Dưới 2 phút cảnh báo
+  const minutes = Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft % 60;
+  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  const isLow = secondsLeft <= 120 && secondsLeft > 0;
   const isExpired = secondsLeft === 0;
+
+  // Circular SVG ring progress (radius 11 -> circumference ~69.1)
+  const radius = 11;
+  const circumference = 2 * Math.PI * radius;
+  const ratio = Math.min(1, Math.max(0, secondsLeft / TOTAL_HOLD_SECONDS));
+  const strokeDashoffset = circumference * (1 - ratio);
 
   return (
     <div
-      className={`d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border ${
+      className={`d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill border ${
         isExpired
-          ? 'bg-light text-muted border-secondary'
-          : isWarning
-          ? 'bg-danger-subtle text-danger border-danger'
-          : 'bg-warning-subtle text-warning-emphasis border-warning'
-      } ${className}`}
+          ? 'bg-danger text-white border-danger'
+          : isLow
+          ? 'badge-danger tr-badge'
+          : 'badge-warning tr-badge'
+      }`}
+      style={{
+        backgroundColor: isExpired
+          ? 'var(--color-danger)'
+          : isLow
+          ? 'var(--color-danger-bg)'
+          : 'var(--color-warning-bg)',
+        color: isExpired
+          ? '#ffffff'
+          : isLow
+          ? 'var(--color-danger)'
+          : 'var(--color-warning)',
+        borderColor: isExpired
+          ? 'var(--color-danger)'
+          : isLow
+          ? 'var(--color-danger-border)'
+          : 'var(--color-warning-border)',
+      }}
       role="timer"
       aria-live="polite"
+      aria-label={`Thời gian giữ vé còn lại ${formattedTime}`}
     >
-      {isWarning || isExpired ? (
+      {isLow ? (
         <AlertTriangle size={18} className="flex-shrink-0" />
       ) : (
-        <Clock size={18} className="flex-shrink-0" />
+        <svg width="26" height="26" viewBox="0 0 28 28" className="flex-shrink-0" aria-hidden="true">
+          <circle
+            cx="14"
+            cy="14"
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeOpacity="0.22"
+            strokeWidth="3"
+          />
+          <circle
+            cx="14"
+            cy="14"
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            transform="rotate(-90 14 14)"
+            style={{ transition: 'stroke-dashoffset 0.6s linear' }}
+          />
+        </svg>
       )}
-      <div className="d-flex flex-column lh-1">
-        <span className="small opacity-75" style={{ fontSize: '0.75rem' }}>
-          {isExpired ? 'Thời gian giữ chỗ' : 'Thời gian giữ chỗ còn lại'}
+      <span className="small fw-medium">
+        {isExpired ? 'Đã hết hạn giữ chỗ' : 'Giữ vé trong:'}
+      </span>
+      {!isExpired && (
+        <span className="fw-bold fs-6 tabular-nums font-monospace">
+          {formattedTime}
         </span>
-        <span className="fw-bold tabular-nums fs-6">
-          {isExpired ? 'Đã hết thời gian giữ chỗ' : formatTimeRemaining(secondsLeft)}
-        </span>
-      </div>
+      )}
     </div>
   );
 };
-

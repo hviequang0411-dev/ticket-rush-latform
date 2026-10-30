@@ -1,121 +1,91 @@
 import React from 'react';
+import type { Event } from '../types/models';
 
 interface EventPosterProps {
   title: string;
+  subtitle?: string;
   category: string;
-  dateStr: string;
-  venueName: string;
-  bgConfig?: {
-    gradient: string;
-    accent: string;
-    pattern: string;
-  };
+  dateText: string;
+  city: string;
+  posterBg: Event['posterBg'];
   height?: number | string;
   className?: string;
+  compact?: boolean;
 }
 
+/** "20:00, Thứ Ba 10/11/2026" or "10/11/2026" → day "10", month "THG 11". */
+function dateStamp(dateText: string): { day: string; month: string } | null {
+  const match = /(\d{1,2})\/(\d{1,2})/.exec(dateText);
+  return match ? { day: match[1].padStart(2, '0'), month: `THG ${Number(match[2])}` } : null;
+}
+
+/**
+ * Generated artwork for an event (the catalog has no images yet). Purely decorative: the event's name is always
+ * shown next to or under the poster, so the poster itself carries only category, date and city.
+ */
 export const EventPoster: React.FC<EventPosterProps> = ({
   title,
   category,
-  dateStr,
-  venueName,
-  bgConfig = {
-    gradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-    accent: '#ea580c',
-    pattern: 'mesh'
-  },
-  height = 240,
-  className = ''
+  dateText,
+  city,
+  posterBg,
+  height = 220,
+  className = '',
+  compact = false,
 }) => {
+  const stamp = dateStamp(dateText);
   return (
     <div
-      className={`position-relative w-100 overflow-hidden d-flex flex-column justify-content-between p-4 ${className}`}
-      style={{
-        height,
-        background: bgConfig.gradient,
-        color: '#ffffff',
-        userSelect: 'none'
-      }}
+      className={`tr-poster ${compact ? 'tr-poster-compact' : ''} ${className}`}
+      style={{ height, background: posterBg.gradient }}
       role="img"
-      aria-label={`Poster sự kiện: ${title}`}
+      aria-label={`Ảnh minh hoạ sự kiện ${title}`}
     >
-      {/* Dynamic Background SVG Pattern */}
-      <svg
-        className="position-absolute top-0 start-0 w-100 h-100 opacity-25 pointer-events-none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      <svg className="tr-poster-art" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <defs>
-          <radialGradient id={`glow-${title.replace(/\s+/g, '')}`} cx="70%" cy="30%" r="60%">
-            <stop offset="0%" stopColor={bgConfig.accent} stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+          <radialGradient id={`glow-${posterBg.pattern}`} cx="78%" cy="18%" r="60%">
+            <stop offset="0%" stopColor={posterBg.accent} stopOpacity="0.85" />
+            <stop offset="100%" stopColor={posterBg.accent} stopOpacity="0" />
           </radialGradient>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#glow-${title.replace(/\s+/g, '')})`} />
-        {bgConfig.pattern === 'circles' && (
-          <>
-            <circle cx="85%" cy="20%" r="80" stroke={bgConfig.accent} strokeWidth="1.5" fill="none" opacity="0.6" />
-            <circle cx="85%" cy="20%" r="130" stroke={bgConfig.accent} strokeWidth="1" strokeDasharray="4 4" fill="none" opacity="0.4" />
-          </>
+        <rect width="400" height="260" fill={`url(#glow-${posterBg.pattern})`} />
+        {posterBg.pattern === 'dots' && (
+          <g fill="none" stroke="#fff" strokeOpacity="0.28">
+            <circle cx="300" cy="70" r="120" />
+            <circle cx="300" cy="70" r="80" />
+            <circle cx="300" cy="70" r="40" />
+          </g>
         )}
-        {bgConfig.pattern === 'waves' && (
-          <path
-            d="M0 180 Q 150 120 300 180 T 600 180 T 900 180"
-            fill="none"
-            stroke={bgConfig.accent}
-            strokeWidth="2"
-            opacity="0.4"
-          />
+        {posterBg.pattern === 'waves' && (
+          <g fill="none" stroke="#fff" strokeOpacity="0.3" strokeWidth="1.5">
+            <path d="M-20 170 Q 90 100 200 170 T 420 170" />
+            <path d="M-20 200 Q 90 130 200 200 T 420 200" />
+            <path d="M-20 230 Q 90 160 200 230 T 420 230" />
+          </g>
         )}
-        {bgConfig.pattern === 'grid' && (
-          <path
-            d="M0 20 H800 M0 60 H800 M0 100 H800 M0 140 H800 M0 180 H800"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="1"
-          />
+        {posterBg.pattern === 'grid' && (
+          <g stroke="#fff" strokeOpacity="0.16">
+            {[40, 80, 120, 160, 200, 240].map(y => (
+              <line key={y} x1="0" y1={y} x2="400" y2={y} />
+            ))}
+            {[80, 160, 240, 320].map(x => (
+              <line key={x} x1={x} y1="0" x2={x} y2="260" />
+            ))}
+          </g>
         )}
       </svg>
 
-      {/* Top Header in Poster */}
-      <div className="position-relative z-1 d-flex justify-content-between align-items-center">
-        <span
-          className="badge text-uppercase tracking-wider px-2 py-1"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.18)',
-            backdropFilter: 'blur(4px)',
-            color: '#fff',
-            fontSize: '0.75rem',
-            letterSpacing: '0.05em'
-          }}
-        >
-          {category}
-        </span>
-        <span
-          className="small opacity-75 font-monospace"
-          style={{ fontSize: '0.8rem' }}
-        >
-          TICKETRUSH LIVE
-        </span>
+      <div className="tr-poster-top">
+        <span className="tr-poster-chip">{category}</span>
+        {stamp && !compact && (
+          <span className="tr-poster-stamp">
+            <span className="tr-poster-day">{stamp.day}</span>
+            <span className="tr-poster-month">{stamp.month}</span>
+          </span>
+        )}
       </div>
 
-      {/* Title & Info Bottom */}
-      <div className="position-relative z-1 mt-auto">
-        <h3
-          className="text-white mb-2 fw-bold text-truncate-2"
-          style={{
-            textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-            fontSize: typeof height === 'number' && height > 280 ? '1.75rem' : '1.25rem',
-            lineHeight: 1.25
-          }}
-        >
-          {title}
-        </h3>
-        <div className="d-flex flex-wrap align-items-center gap-3 text-white-50 small">
-          <span className="text-white opacity-90 fw-medium">{dateStr}</span>
-          <span>•</span>
-          <span className="text-truncate" style={{ maxWidth: '240px' }}>{venueName}</span>
-        </div>
-      </div>
+      <div className="tr-poster-city">{city}</div>
     </div>
   );
 };
-

@@ -1,65 +1,53 @@
 import React from 'react';
 import type { EventStatus, OrderStatus, PaymentStatus } from '../types/models';
 
-export const StatusBadge: React.FC<{
-  type: 'event' | 'order' | 'payment';
-  status: EventStatus | OrderStatus | PaymentStatus;
-}> = ({ type, status }) => {
-  if (type === 'event') {
-    switch (status as EventStatus) {
+interface StatusBadgeProps {
+  status: EventStatus | OrderStatus | PaymentStatus | string;
+  type?: 'event' | 'order' | 'payment';
+}
+
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+  const getConfig = (): { label: string; className: string } => {
+    switch (status) {
+      // Event statuses
       case 'PUBLISHED':
-        return <span className="tr-badge badge-success">Đang mở bán</span>;
+        return { label: 'Đang mở bán', className: 'badge-success' };
       case 'DRAFT':
-        return <span className="tr-badge badge-neutral">Sắp mở bán</span>;
+        return { label: 'Bản nháp', className: 'badge-neutral' };
       case 'ENDED':
-        return <span className="tr-badge badge-neutral">Đã kết thúc</span>;
+        return { label: 'Đã kết thúc', className: 'badge-neutral' };
       case 'CANCELLED':
-        return <span className="tr-badge badge-danger">Đã huỷ</span>;
-      default:
-        return <span className="tr-badge badge-neutral">{status}</span>;
-    }
-  }
+        return { label: 'Đã huỷ', className: 'badge-danger' };
 
-  if (type === 'order') {
-    switch (status as OrderStatus) {
-      case 'CONFIRMED':
-        return <span className="tr-badge badge-success">Đã xác nhận</span>;
-      case 'AWAITING_PAYMENT':
-        return <span className="tr-badge badge-warning">Chờ thanh toán</span>;
+      // Order statuses
+      case 'PENDING':
+        return { label: 'Đang xử lý', className: 'badge-info' };
       case 'RESERVED':
-        return <span className="tr-badge badge-info">Đang giữ chỗ</span>;
-      case 'PENDING':
-        return <span className="tr-badge badge-neutral">Đang xử lý</span>;
+        return { label: 'Đang giữ ghế (10p)', className: 'badge-warning' };
+      case 'AWAITING_PAYMENT':
+        return { label: 'Chờ thanh toán', className: 'badge-warning' };
+      case 'CONFIRMED':
+        return { label: 'Đã xác nhận', className: 'badge-success' };
       case 'EXPIRED':
-        return <span className="tr-badge badge-neutral">Đã hết hạn</span>;
-      case 'CANCELLED':
-        return <span className="tr-badge badge-danger">Đã huỷ</span>;
+        return { label: 'Hết hạn giữ chỗ', className: 'badge-neutral' };
       case 'FAILED':
-        return <span className="tr-badge badge-danger">Thất bại</span>;
+        return { label: 'Thất bại', className: 'badge-danger' };
       case 'REFUNDED':
-        return <span className="tr-badge badge-neutral">Đã hoàn tiền</span>;
-      default:
-        return <span className="tr-badge badge-neutral">{status}</span>;
-    }
-  }
+        return { label: 'Đã hoàn tiền', className: 'badge-info' };
 
-  if (type === 'payment') {
-    switch (status as PaymentStatus) {
+      // Payment statuses
+      case 'INITIATED':
+        return { label: 'Khởi tạo', className: 'badge-info' };
+      case 'PROCESSING':
+        return { label: 'Đang thanh toán', className: 'badge-warning' };
       case 'SUCCEEDED':
-        return <span className="tr-badge badge-success">Thành công</span>;
-      case 'PENDING':
-        return <span className="tr-badge badge-warning">Đang chờ xử lý</span>;
-      case 'FAILED':
-        return <span className="tr-badge badge-danger">Thất bại</span>;
-      case 'EXPIRED':
-        return <span className="tr-badge badge-neutral">Hết hạn thanh toán</span>;
-      case 'REFUNDED':
-        return <span className="tr-badge badge-neutral">Đã hoàn tiền</span>;
+        return { label: 'Thành công', className: 'badge-success' };
+
       default:
-        return <span className="tr-badge badge-neutral">{status}</span>;
+        return { label: status, className: 'badge-neutral' };
     }
-  }
+  };
 
-  return <span className="tr-badge badge-neutral">{status}</span>;
+  const { label, className } = getConfig();
+  return <span className={`tr-badge ${className}`}>{label}</span>;
 };
-

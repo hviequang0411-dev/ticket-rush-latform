@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, X } from 'lucide-react';
 import { AdminApi, type AdminOrder } from '../../api/adminApi';
 import type { ApiErrorProblem, OrderStatus } from '../../types/models';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -61,8 +61,8 @@ export const AdminOrdersPage: React.FC = () => {
       </div>
 
       <div className="tr-card p-3 mb-4 d-flex flex-column flex-sm-row gap-2">
-        <div className="input-group" style={{ maxWidth: 400 }}>
-          <span className="input-group-text bg-surface-subtle border-end-0">
+        <div className="input-group" style={{ maxWidth: 420 }}>
+          <span className="input-group-text border-end-0">
             <Search size={16} className="text-muted" />
           </span>
           <input
@@ -83,15 +83,15 @@ export const AdminOrdersPage: React.FC = () => {
 
       {error && <ErrorState title={error.title} message={error.detail} status={error.status} onRetry={() => load(searchTerm, status)} />}
 
-      <div className="tr-card overflow-hidden mb-4">
+      <div className="tr-table-card mb-4">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
-              <tr className="small text-muted">
+            <thead>
+              <tr>
                 <th>MÃ ĐƠN</th>
                 <th>SỰ KIỆN</th>
                 <th>NGƯỜI MUA</th>
-                <th>TỔNG TIỀN</th>
+                <th className="text-end">TỔNG TIỀN</th>
                 <th>TRẠNG THÁI</th>
                 <th>THỜI GIAN</th>
                 <th className="text-end">CHI TIẾT</th>
@@ -106,11 +106,11 @@ export const AdminOrdersPage: React.FC = () => {
               {orders.map(order => (
                 <tr key={order.code}>
                   <td className="font-monospace fw-bold text-main">{order.code}</td>
-                  <td className="small">{order.items[0] ? eventName(order.items[0].eventId) : '—'}</td>
-                  <td className="text-main fw-medium">{order.userLogin}</td>
-                  <td className="fw-bold text-primary tabular-nums">{formatVND(order.totalAmount)}</td>
+                  <td className="small fw-medium">{order.items[0] ? eventName(order.items[0].eventId) : '—'}</td>
+                  <td className="text-main">{order.userLogin}</td>
+                  <td className="fw-bold text-primary tabular-nums text-end">{formatVND(order.totalAmount)}</td>
                   <td><StatusBadge type="order" status={order.status} /></td>
-                  <td className="small text-muted">{formatDateTimeVN(order.createdAt)}</td>
+                  <td className="small text-muted tabular-nums">{formatDateTimeVN(order.createdAt)}</td>
                   <td className="text-end">
                     <button className="btn btn-sm btn-tr-ghost p-1" aria-label={`Xem đơn ${order.code}`} onClick={() => openDetail(order.code)}>
                       <Eye size={16} />
@@ -125,7 +125,8 @@ export const AdminOrdersPage: React.FC = () => {
 
       {selected && (
         <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 z-3 d-flex align-items-center justify-content-center p-3"
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center p-3"
+          style={{ zIndex: 1060, backdropFilter: 'blur(4px)' }}
           onClick={() => setSelected(null)}
         >
           <div
@@ -138,7 +139,12 @@ export const AdminOrdersPage: React.FC = () => {
           >
             <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-subtle">
               <span className="font-monospace fw-bold fs-5 text-main">{selected.code}</span>
-              <StatusBadge type="order" status={selected.status} />
+              <div className="d-flex align-items-center gap-2">
+                <StatusBadge type="order" status={selected.status} />
+                <button className="btn btn-tr-ghost p-1" onClick={() => setSelected(null)} aria-label="Đóng">
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="row g-2 small mb-3">
@@ -148,7 +154,7 @@ export const AdminOrdersPage: React.FC = () => {
               </div>
               <div className="col-6">
                 <span className="text-muted">Đặt lúc:</span>
-                <div className="text-main">{formatDateTimeVN(selected.createdAt)}</div>
+                <div className="text-main tabular-nums">{formatDateTimeVN(selected.createdAt)}</div>
               </div>
               {selected.failureReason && (
                 <div className="col-12">

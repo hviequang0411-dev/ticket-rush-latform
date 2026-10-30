@@ -1,11 +1,118 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, CheckCircle2, Clock, RotateCcw } from 'lucide-react';
+import { ShoppingBag, CheckCircle2, Clock, RotateCcw, Calendar, MapPin, ArrowRight, XCircle } from 'lucide-react';
 import { ApiService } from '../../api/apiClient';
 import type { OrderSummary, ApiErrorProblem } from '../../types/models';
 import { signIn } from '../../api/auth';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatVND, formatDateTimeVN } from '../../lib/format';
 import { EmptyState, ErrorState } from '../../components/DataStates';
+
+/** Presentational order timeline: where the order stands, in the buyer's words */
+const OrderSagaTimeline: React.FC<{ order: OrderSummary }> = ({ order }) => {
+  const isConfirmed = order.status === 'CONFIRMED';
+  const isAwaiting = order.status === 'AWAITING_PAYMENT' || order.status === 'RESERVED';
+  const isRefunded = order.status === 'REFUNDED';
+  const isExpired = order.status === 'EXPIRED';
+
+  const isFailed = order.status === 'FAILED';
+  const isCancelled = order.status === 'CANCELLED';
+  const soldOut = isFailed && order.failureReason === 'SOLD_OUT';
+
+  const steps = [
+    {
+      title: 'Đặt đơn',
+      desc: formatDateTimeVN(order.createdAt),
+      tone: 'success',
+      icon: <CheckCircle2 size={14} />,
+    },
+    {
+      title: soldOut ? 'Không còn đủ ghế' : 'Giữ ghế 10 phút',
+      desc: soldOut ? 'Rất tiếc, loại vé bạn chọn đã hết' : 'Ghế được giữ riêng cho bạn trong lúc thanh toán',
+      tone: soldOut ? 'danger' : 'success',
+      icon: soldOut ? <XCircle size={14} /> : <CheckCircle2 size={14} />,
+    },
+    {
+      title: 'Thanh toán',
+      desc: isConfirmed || isRefunded
+        ? 'Đã nhận thanh toán'
+        : isAwaiting
+        ? 'Đang chờ bạn hoàn tất thanh toán'
+        : 'Chưa thanh toán',
+      tone: isConfirmed || isRefunded ? 'success' : isAwaiting ? 'warning' : 'neutral',
+      icon: isConfirmed || isRefunded ? <CheckCircle2 size={14} /> : isAwaiting ? <Clock size={14} /> : <XCircle size={14} />,
+    },
+    {
+      title: isConfirmed
+        ? 'Đã xuất vé'
+        : isRefunded
+        ? 'Đã hoàn tiền'
+        : isExpired
+        ? 'Hết thời gian giữ ghế'
+        : isCancelled
+        ? 'Đã huỷ đơn'
+        : isFailed
+        ? 'Đơn không thành công'
+        : 'Xuất vé',
+      desc: isConfirmed
+        ? 'Vé đã có trong Ví vé, quét mã QR tại cổng để vào'
+        : isRefunded
+        ? 'Ghế không còn khi tiền về nên bạn đã được hoàn tiền'
+        : isExpired
+        ? 'Ghế đã được trả lại để người khác có thể mua'
+        : isCancelled
+        ? 'Ghế đã được trả lại'
+        : isFailed
+        ? 'Bạn chưa bị trừ tiền cho đơn này'
+        : 'Vé sẽ có trong Ví vé ngay sau khi thanh toán',
+      tone: isConfirmed ? 'success' : isRefunded ? 'info' : isAwaiting ? 'neutral' : 'danger',
+      icon: isConfirmed ? <CheckCircle2 size={14} /> : isAwaiting ? <Clock size={14} /> : <RotateCcw size={14} />,
+    },
+  ];
+
+  return (
+    <div className="p-3 p-md-4 rounded-3 bg-surface-subtle border border-subtle mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h4 className="fs-6 fw-bold mb-0">Tiến trình đơn hàng</h4>
+      </div>
+
+      <div className="position-relative ps-4 ms-2" style={{ borderLeft: '2px solid var(--border-strong)' }}>
+        {steps.map((s, idx) => {
+          const dotBg =
+            s.tone === 'success'
+              ? 'var(--color-success)'
+              : s.tone === 'warning'
+              ? 'var(--color-warning)'
+              : s.tone === 'info'
+              ? 'var(--color-info)'
+              : s.tone === 'danger'
+              ? 'var(--color-danger)'
+              : 'var(--text-muted)';
+
+          return (
+            <div key={idx} className={`position-relative ${idx < steps.length - 1 ? 'mb-3 pb-1' : ''}`}>
+              <div
+                className="position-absolute top-0 start-0 translate-middle rounded-circle text-white d-flex align-items-center justify-content-center shadow-xs"
+                style={{
+                  width: 24,
+                  height: 24,
+                  left: '-25px',
+                  top: '10px',
+                  backgroundColor: dotBg,
+                }}
+              >
+                {s.icon}
+              </div>
+              <div className="fw-semibold text-main small">{s.title}</div>
+              <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                {s.desc}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 export const MyOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
@@ -59,33 +166,42 @@ export const MyOrdersPage: React.FC = () => {
 
   return (
     <div className="tr-container py-4">
-      <div className="d-flex align-items-center justify-content-between mb-4">
+      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
         <div>
+          <span className="tr-badge badge-info mb-2">LỊCH SỬ GIAO DỊCH</span>
           <h1 className="fs-3 fw-bold mb-1">Đơn hàng của tôi</h1>
-          <p className="text-muted small mb-0">Theo dõi tiến trình giữ chỗ, thanh toán và lịch sử các vé đã mua</p>
+          <p className="text-muted small mb-0">
+            Theo dõi tiến trình giữ ghế, xác nhận thanh toán và nhánh bù trừ hoàn tiền
+          </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="d-flex gap-2 border-bottom border-subtle mb-4 pb-1 overflow-auto">
+      {/* Filter Tabs */}
+      <div className="d-flex gap-2 border-bottom border-subtle mb-4 pb-2 overflow-auto" role="tablist">
         {[
-          { id: 'ALL', label: 'Tất cả đơn' },
-          { id: 'CONFIRMED', label: 'Đã xác nhận' },
-          { id: 'AWAITING_PAYMENT', label: 'Chờ thanh toán' },
-          { id: 'COMPLETED_REFUNDED', label: 'Hết hạn / Hoàn tiền' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`btn btn-sm btn-touch-target border-0 pb-2 px-3 fw-semibold rounded-0 transition-all ${
-              activeTab === tab.id
-                ? 'border-bottom border-primary text-primary border-3'
-                : 'text-muted'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+          { id: 'ALL', label: 'Tất cả đơn', count: orders.length },
+          { id: 'CONFIRMED', label: 'Đã xác nhận', count: orders.filter(o => o.status === 'CONFIRMED').length },
+          { id: 'AWAITING_PAYMENT', label: 'Chờ thanh toán', count: orders.filter(o => o.status === 'AWAITING_PAYMENT' || o.status === 'RESERVED').length },
+          { id: 'COMPLETED_REFUNDED', label: 'Hết hạn / Hoàn tiền', count: orders.filter(o => o.status === 'REFUNDED' || o.status === 'EXPIRED' || o.status === 'CANCELLED').length },
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`btn btn-sm btn-touch-target rounded-pill px-3 fw-semibold flex-shrink-0 transition-all ${
+                isActive ? 'btn-tr-primary' : 'btn-tr-secondary'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className="badge rounded-pill bg-surface text-main ms-1 tabular-nums">
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {error && <ErrorState message={error} onRetry={loadOrders} />}
@@ -101,6 +217,9 @@ export const MyOrdersPage: React.FC = () => {
               </div>
             ))}
           </div>
+          <div className="col-12 col-lg-7">
+            <div className="tr-skeleton w-100 rounded-3" style={{ height: 360 }} />
+          </div>
         </div>
       ) : filteredOrders.length === 0 ? (
         <EmptyState
@@ -112,157 +231,112 @@ export const MyOrdersPage: React.FC = () => {
         />
       ) : (
         <div className="row g-4">
-          {/* Order list column */}
+          {/* Master Order List Column */}
           <div className="col-12 col-lg-5">
             <div className="d-flex flex-column gap-3">
-              {filteredOrders.map(order => (
-                <div
-                  key={order.id}
-                  onClick={() => setSelectedOrder(order)}
-                  className={`tr-card p-3 cursor-pointer transition-all ${
-                    selectedOrder?.id === order.id ? 'border-primary shadow-sm bg-surface' : 'bg-surface'
-                  }`}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="font-monospace fw-bold text-main small">{order.code}</span>
-                    <StatusBadge type="order" status={order.status} />
-                  </div>
-                  <h4 className="fs-6 fw-bold text-main mb-1 text-truncate">{order.event.name}</h4>
-                  <div className="small text-muted mb-2">{formatDateTimeVN(order.event.startTime)}</div>
+              {filteredOrders.map(order => {
+                const isSelected = selectedOrder?.id === order.id;
+                return (
+                  <div
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className={`tr-card p-3 p-md-4 transition-all ${
+                      isSelected ? 'border-primary shadow-md' : ''
+                    }`}
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: isSelected ? 'var(--color-primary-subtle)' : 'var(--bg-surface)',
+                    }}
+                  >
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="font-monospace fw-bold text-main small">{order.code}</span>
+                      <StatusBadge type="order" status={order.status} />
+                    </div>
+                    <h3 className="fs-6 fw-bold text-main mb-1 text-truncate">{order.event.name}</h3>
+                    <div className="small text-muted mb-3 d-flex align-items-center gap-1 tabular-nums">
+                      <Calendar size={14} className="text-primary" />
+                      <span>{formatDateTimeVN(order.event.startTime)}</span>
+                    </div>
 
-                  <div className="d-flex justify-content-between align-items-center pt-2 border-top border-subtle">
-                    <span className="small text-muted">{order.items.reduce((s, i) => s + i.quantity, 0)} vé</span>
-                    <span className="fw-bold text-primary tabular-nums">{formatVND(order.totalAmount)}</span>
+                    <div className="d-flex justify-content-between align-items-center pt-2 border-top border-subtle">
+                      <span className="small text-muted tabular-nums">
+                        {order.items.reduce((s, i) => s + i.quantity, 0)} vé đã chọn
+                      </span>
+                      <span className="fw-bold text-primary tabular-nums fs-6">
+                        {formatVND(order.totalAmount)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* Order Detail & Timeline column */}
+          {/* Detail & Saga Timeline Column */}
           <div className="col-12 col-lg-7">
             {selectedOrder && (
-              <div className="tr-card p-4 shadow-sm bg-surface sticky-top" style={{ top: '88px' }}>
-                <div className="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom border-subtle">
+              <div className="tr-card p-4 sticky-top" style={{ top: '84px' }}>
+                <div className="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom border-subtle">
                   <div>
-                    <span className="small text-muted">Chi tiết đơn hàng:</span>
-                    <h3 className="fs-5 fw-bold text-main font-monospace mb-0">{selectedOrder.code}</h3>
+                    <span className="small text-muted d-block">Mã tra cứu đơn hàng</span>
+                    <h2 className="fs-4 fw-bold text-main font-monospace mb-0">{selectedOrder.code}</h2>
                   </div>
                   <StatusBadge type="order" status={selectedOrder.status} />
                 </div>
 
-                {/* Timeline progress steps */}
-                <h4 className="fs-6 fw-bold mb-3">Tiến trình xử lý đơn hàng (Saga Timeline)</h4>
-                <div className="position-relative ps-4 mb-4 border-start border-2 border-primary-subtle ms-2">
-                  {/* Step 1: Tạo đơn */}
-                  <div className="position-relative mb-3">
-                    <div className="position-absolute top-0 start-0 translate-middle rounded-circle bg-success text-white p-1 d-flex align-items-center justify-content-center" style={{ width: 22, height: 22, left: '-17px' }}>
-                      <CheckCircle2 size={14} />
-                    </div>
-                    <div className="fw-semibold text-main small">1. Đã tiếp nhận yêu cầu đặt vé</div>
-                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>{formatDateTimeVN(selectedOrder.createdAt)}</div>
-                  </div>
-
-                  {/* Step 2: Giữ ghế */}
-                  <div className="position-relative mb-3">
-                    <div className="position-absolute top-0 start-0 translate-middle rounded-circle bg-success text-white p-1 d-flex align-items-center justify-content-center" style={{ width: 22, height: 22, left: '-17px' }}>
-                      <CheckCircle2 size={14} />
-                    </div>
-                    <div className="fw-semibold text-main small">2. Kho vé khoá giữ ghế 10 phút</div>
-                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>Khoá ghế thành công tại Inventory Service</div>
-                  </div>
-
-                  {/* Step 3: Thanh toán */}
-                  <div className="position-relative mb-3">
-                    <div className={`position-absolute top-0 start-0 translate-middle rounded-circle p-1 d-flex align-items-center justify-content-center text-white ${
-                      selectedOrder.status === 'CONFIRMED' ? 'bg-success' : selectedOrder.status === 'AWAITING_PAYMENT' ? 'bg-warning' : 'bg-secondary'
-                    }`} style={{ width: 22, height: 22, left: '-17px' }}>
-                      {selectedOrder.status === 'CONFIRMED' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
-                    </div>
-                    <div className="fw-semibold text-main small">3. Trạng thái thanh toán</div>
-                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                      {selectedOrder.status === 'CONFIRMED'
-                        ? 'Thanh toán thành công qua cổng liên kết'
-                        : selectedOrder.status === 'AWAITING_PAYMENT'
-                        ? 'Đang chờ nhận tín hiệu Webhook từ đối tác thanh toán'
-                        : 'Không hoàn tất giao dịch'}
-                    </div>
-                  </div>
-
-                  {/* Step 4: Nhánh hoàn thành hoặc bù trừ */}
-                  <div className="position-relative">
-                    <div className={`position-absolute top-0 start-0 translate-middle rounded-circle p-1 d-flex align-items-center justify-content-center text-white ${
-                      selectedOrder.status === 'CONFIRMED'
-                        ? 'bg-success'
-                        : selectedOrder.status === 'REFUNDED'
-                        ? 'bg-info'
-                        : selectedOrder.status === 'EXPIRED'
-                        ? 'bg-secondary'
-                        : 'bg-secondary'
-                    }`} style={{ width: 22, height: 22, left: '-17px' }}>
-                      {selectedOrder.status === 'CONFIRMED' ? <CheckCircle2 size={14} /> : <RotateCcw size={14} />}
-                    </div>
-                    <div className="fw-semibold text-main small">
-                      {selectedOrder.status === 'CONFIRMED'
-                        ? '4. Đã xuất vé điện tử'
-                        : selectedOrder.status === 'REFUNDED'
-                        ? '4. Nhánh bù trừ: Hoàn trả tiền vào tài khoản'
-                        : selectedOrder.status === 'EXPIRED'
-                        ? '4. Nhánh bù trừ: Hết hạn giữ chỗ, hoàn ghế vào kho'
-                        : '4. Kết quả'}
-                    </div>
-                    {selectedOrder.failureReason && (
-                      <div className="text-danger small mt-1">{selectedOrder.failureReason}</div>
-                    )}
-                  </div>
-                </div>
+                {/* Visual Saga Timeline */}
+                <OrderSagaTimeline order={selectedOrder} />
 
                 {/* Event info & Customer */}
-                <div className="bg-surface-subtle p-3 rounded-3 border border-subtle mb-3">
+                <div className="p-3 rounded-3 bg-surface-subtle border border-subtle mb-3">
                   <div className="fw-bold text-main mb-1">{selectedOrder.event.name}</div>
-                  <div className="small text-muted mb-2">{selectedOrder.event.venueAddress}</div>
+                  <div className="small text-muted mb-2 d-flex align-items-center gap-1">
+                    <MapPin size={14} className="text-primary" />
+                    <span>{selectedOrder.event.venueAddress}</span>
+                  </div>
                   <div className="small text-muted">
-                    Người đặt: <strong>{selectedOrder.customerName}</strong>
+                    Người nhận vé: <strong className="text-main">{selectedOrder.customerName}</strong>
                   </div>
                 </div>
 
                 {/* Items */}
                 <div className="mb-4">
-                  <div className="fw-semibold small mb-2">Chi tiết loại vé:</div>
+                  <div className="fw-semibold small mb-2 text-muted">Chi tiết hạng vé</div>
                   {selectedOrder.items.map(item => (
-                    <div key={item.ticketTypeId} className="d-flex justify-content-between py-1 border-bottom border-subtle small">
-                      <span>{item.ticketTypeName} × {item.quantity}</span>
-                      <span className="fw-semibold tabular-nums">{formatVND(item.unitPrice * item.quantity)}</span>
+                    <div key={item.ticketTypeId} className="d-flex justify-content-between py-2 border-bottom border-subtle small">
+                      <span className="text-main fw-medium">{item.ticketTypeName} × {item.quantity}</span>
+                      <span className="fw-semibold text-main tabular-nums">{formatVND(item.unitPrice * item.quantity)}</span>
                     </div>
                   ))}
-                  <div className="d-flex justify-content-between pt-2">
-                    <span className="fw-bold">Tổng thanh toán:</span>
-                    <span className="fw-bold text-primary tabular-nums fs-5">{formatVND(selectedOrder.totalAmount)}</span>
+                  <div className="d-flex justify-content-between align-items-center pt-3">
+                    <span className="fw-bold text-main">Tổng thanh toán</span>
+                    <span className="fw-bold text-primary tabular-nums fs-4">{formatVND(selectedOrder.totalAmount)}</span>
                   </div>
                 </div>
 
                 {/* Action buttons */}
                 {selectedOrder.status === 'AWAITING_PAYMENT' && (
-                  <div className="d-flex gap-2">
+                  <div className="d-flex flex-wrap gap-2">
                     <button
                       onClick={() => handleCancelOrder(selectedOrder.code)}
-                      className="btn btn-sm btn-outline-danger"
+                      className="btn btn-tr-secondary text-danger"
                     >
                       Huỷ giữ chỗ
                     </button>
                     <a
                       href={selectedOrder.paymentUrl ?? `/order-result?orderCode=${encodeURIComponent(selectedOrder.code)}`}
-                      className="btn btn-sm btn-tr-primary flex-grow-1 text-center"
+                      className="btn btn-tr-primary flex-grow-1 text-decoration-none"
                     >
-                      Tiếp tục thanh toán ngay
+                      <span>Tiếp tục thanh toán ngay</span>
+                      <ArrowRight size={16} />
                     </a>
                   </div>
                 )}
 
                 {selectedOrder.status === 'CONFIRMED' && (
-                  <a href="/wallet" className="btn btn-tr-primary w-100">
-                    Xem vé trong Ví vé
+                  <a href="/wallet" className="btn btn-tr-primary w-100 text-decoration-none">
+                    <span>Xem vé trong Ví vé điện tử</span>
+                    <ArrowRight size={16} />
                   </a>
                 )}
               </div>

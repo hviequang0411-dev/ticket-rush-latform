@@ -15,6 +15,9 @@ public class JHipsterBlockHoundIntegration implements BlockHoundIntegration {
         builder.allowBlockingCallsInside("org.springdoc.core.service.OpenAPIService", "build");
         builder.allowBlockingCallsInside("org.springdoc.core.service.OpenAPIService", "getWebhooksClasses");
         builder.allowBlockingCallsInside("org.springdoc.core.service.AbstractRequestService", "build");
+        // Lettuce reconnecting Redis's shared connection after it was lost. The connection is opened at startup
+        // (RateLimitConfiguration), so this only runs after a disconnect, bounded by the 2 s connect timeout
+        builder.allowBlockingCallsInside("org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection", "getNativeConnection");
         // jhipster-needle-blockhound-integration - JHipster will add additional gradle plugins here
     }
 }

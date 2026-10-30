@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
@@ -54,7 +55,9 @@ import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHe
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode;
 import org.springframework.security.web.server.util.matcher.AndServerWebExchangeMatcher;
 import org.springframework.security.web.server.util.matcher.NegatedServerWebExchangeMatcher;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tech.jhipster.config.JHipsterProperties;
@@ -94,11 +97,14 @@ public class SecurityConfiguration {
                     .csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
                     // See https://stackoverflow.com/q/74447118/65681
                     .csrfTokenRequestHandler(new ServerCsrfTokenRequestAttributeHandler())
-                    // Payment provider callbacks and the mock provider's page never carry our CSRF cookie
+                    // Payment provider callbacks and the mock provider's page never carry our CSRF cookie. Setting a
+                    // matcher replaces the resource server's own exemption for bearer-token requests, so restate it:
+                    // browsers never attach an Authorization header on their own, so those requests can't be forged
                     .requireCsrfProtectionMatcher(
                         new AndServerWebExchangeMatcher(
                             CsrfWebFilter.DEFAULT_CSRF_MATCHER,
-                            new NegatedServerWebExchangeMatcher(pathMatchers(PAYMENT_PUBLIC_PATH))
+                            new NegatedServerWebExchangeMatcher(pathMatchers(PAYMENT_PUBLIC_PATH)),
+                            new NegatedServerWebExchangeMatcher(SecurityConfiguration::hasBearerToken)
                         )
                     )
             )
@@ -148,6 +154,13 @@ public class SecurityConfiguration {
             .oauth2Client(withDefaults())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
+    }
+
+    private static Mono<ServerWebExchangeMatcher.MatchResult> hasBearerToken(ServerWebExchange exchange) {
+        String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        return authorization != null && authorization.regionMatches(true, 0, "Bearer ", 0, 7)
+            ? ServerWebExchangeMatcher.MatchResult.match()
+            : ServerWebExchangeMatcher.MatchResult.notMatch();
     }
 
     private DelegatingServerAuthenticationEntryPoint authenticationEntryPoint() {

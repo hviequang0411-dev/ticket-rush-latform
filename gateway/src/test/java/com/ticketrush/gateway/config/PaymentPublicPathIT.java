@@ -42,6 +42,18 @@ class PaymentPublicPathIT {
     }
 
     @Test
+    void bearerTokenRequestsAreNotSubjectToCsrf() {
+        // CSRF runs first and would answer 403; past it, the test's mocked JWT decoder decides (not 403 either way)
+        webTestClient
+            .post()
+            .uri("/services/order/api/checkout")
+            .header("Authorization", "Bearer not-a-real-token")
+            .exchange()
+            .expectStatus()
+            .value(status -> assertThat(status).isNotEqualTo(HttpStatus.FORBIDDEN.value()));
+    }
+
+    @Test
     void everythingElseStillNeedsAuthentication() {
         webTestClient.get().uri("/services/payment/api/payments").exchange().expectStatus().value(status -> assertThat(status).isIn(302, 401));
     }

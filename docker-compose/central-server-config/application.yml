@@ -23,3 +23,12 @@ management:
       percentiles-histogram:
         http.server.requests: true
         ticketrush.checkout: true
+  # Metrics are scraped by Prometheus and logs stay in the container; only traces go out over OTLP
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false

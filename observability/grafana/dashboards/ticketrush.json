@@ -55,7 +55,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Checkout latency (accepted)",
-      "description": "Price lookup, seat hold and payment creation; click an exemplar to open its trace",
+      "description": "Price lookup, seat hold and payment creation; click an exemplar to open its trace in Tempo",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

@@ -11,10 +11,17 @@ datasources:
       # Click a latency exemplar to open its trace
       exemplarTraceIdDestinations:
         - name: trace_id
-          datasourceUid: jaeger
+          datasourceUid: tempo
 
-  - name: Jaeger
-    uid: jaeger
-    type: jaeger
+  - name: Tempo
+    uid: tempo
+    type: tempo
     access: proxy
-    url: http://jaeger:16686
+    url: http://tempo:3200
+    jsonData:
+      # From a span, jump to the metrics of the service that produced it
+      tracesToMetrics:
+        datasourceUid: prometheus
+        tags:
+          - key: service.name
+            value: application

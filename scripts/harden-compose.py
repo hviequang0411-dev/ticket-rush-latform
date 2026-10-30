@@ -218,6 +218,15 @@ management:
       percentiles-histogram:
         http.server.requests: true
         ticketrush.checkout: true
+  # Metrics are scraped by Prometheus and logs stay in the container; only traces go out over OTLP
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
 """
 
 
@@ -226,6 +235,9 @@ def harden_central(text: str) -> str:
         text = text.rstrip("\n") + "\n" + CONSUL_DISCOVERY
     if "percentiles-histogram" not in text:
         text = text.rstrip("\n") + "\n" + METRICS
+    elif "otlp:" not in text:
+        # Config hardened before OTLP export was switched off: add just that part
+        text = text.rstrip("\n") + "\n" + METRICS[METRICS.index("  # Metrics are scraped") :]
     return re.sub(
         r"\njhipster:\n  security:\n    authentication:\n      jwt:\n        base64-secret: \S+\n",
         "\n# jhipster.security.authentication.jwt.base64-secret is injected per service via the\n"

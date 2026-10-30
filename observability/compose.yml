@@ -15,12 +15,23 @@ services:
     ports:
       - 127.0.0.1:9090:9090
 
-  jaeger:
-    image: jaegertracing/jaeger:2.22.0
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    ports:
-      - 127.0.0.1:16686:16686
+  # Jaeger 2.22 dropped the HTTP API Grafana's Jaeger datasource uses; Tempo is Grafana's own trace store
+  # Tempo runs as uid 10001 and its image has no shell tools: hand it the volume first
+  tempo-init:
+    image: busybox:1.37.0
+    command: ['chown', '10001:10001', '/var/tempo']
+    volumes:
+      - tempo-data:/var/tempo
+
+  tempo:
+    image: grafana/tempo:2.10.10
+    command: ['-config.file=/etc/tempo.yaml']
+    volumes:
+      - ../observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    depends_on:
+      tempo-init:
+        condition: service_completed_successfully
 
   grafana:
     image: grafana/grafana:13.2.2
@@ -36,31 +47,34 @@ services:
       - 127.0.0.1:3000:3000
     depends_on:
       - prometheus
-      - jaeger
+      - tempo
 
-  # Services export traces over OTLP to Jaeger
+  # Services export traces over OTLP to Tempo
   gateway:
     environment:
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/v1/traces
       # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
       - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
   catalog:
     environment:
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/v1/traces
       # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
       - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
   inventory:
     environment:
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/v1/traces
       # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
       - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
   order:
     environment:
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/v1/traces
       # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
       - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
   payment:
     environment:
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/v1/traces
       # Every request traced in the demo; lower it for load tests (TRACING_SAMPLING_PROBABILITY)
       - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=${TRACING_SAMPLING_PROBABILITY:-1.0}
+
+volumes:
+  tempo-data:

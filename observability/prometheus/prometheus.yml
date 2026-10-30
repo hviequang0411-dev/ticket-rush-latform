@@ -9,8 +9,11 @@ scrape_configs:
     consul_sd_configs:
       - server: consul:8500
         services: [gateway, catalog, inventory, order, payment]
-        health_filter: passing
     relabel_configs:
+      # Healthy instances only: a restarted service leaves a critical registration behind for a while
+      - source_labels: [__meta_consul_health]
+        regex: passing
+        action: keep
       - source_labels: [__meta_consul_service]
         target_label: service
       - source_labels: [__meta_consul_service_id]
